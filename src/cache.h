@@ -15,8 +15,9 @@
 #define IR_CACHE_C 0x2000//block size for instruction cache in byte
 #define IR_CACHE_A 4//associativity for instruction cache
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
-#define MAX_BLOCK_NUM MAX(D_CACHE_C / D_CACHE_B, IR_CACHE_C / IR_CACHE_B) //max block number 
 #define MAX_BLOCK_SIZE MAX(D_CACHE_B, IR_CACHE_B) / 4 //max block size in word
+#define MAX_SET_NUM MAX(D_CACHE_C / (D_CACHE_B * D_CACHE_A), IR_CACHE_C / (IR_CACHE_B * IR_CACHE_A))
+#define MAX_A MAX(D_CACHE_A, IR_CACHE_A)
 
 enum CACHE_ENUM {DATA_CACHE, IR_CACHE};
 /* data structure for a word in a cache*/
@@ -33,7 +34,7 @@ typedef struct {
     int associativity;
     int block_size;//how many byte a block stores;
     int cache_size;//how many byte a cache stores;    
-    CACHE_BLOCK_T cache_data[MAX_BLOCK_NUM];//the memory of the cache data is initialized at the cache_init() routine
+    CACHE_BLOCK_T cache_data[MAX_SET_NUM][MAX_A];//the memory of the cache data is initialized at the cache_init() routine
 } CACHE_T;
 
 //define the global cache(data cache and instruction cache)

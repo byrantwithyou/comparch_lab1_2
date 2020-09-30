@@ -43,9 +43,10 @@ int cache_miss(uint32_t address, enum CACHE_ENUM cache_type) {
     CACHE_T cache_temp = cache_type == DATA_CACHE? data_cache:ir_cache;
     uint32_t tag = cache_type == DATA_CACHE? address >> 13:address >> 11;
     int set = cache_type == DATA_CACHE? address >> 5 & 0xFF:address >> 5 & 0x3F;
-    for(; i < block_num; ++i) {
-        CACHE_BLOCK_T *block_temp = &(cache_temp.cache_data[i]);
-        if (block_temp->valid && block_temp->set == set && block_temp->tag == tag) return FALSE;
+    int asso_temp = cache_type == DATA_CACHE? D_CACHE_A:IR_CACHE_A;
+    for(; i < asso_temp; ++i) {
+        CACHE_BLOCK_T *block_temp = &(cache_temp.cache_data[set][i]);
+        if (block_temp->valid && block_temp->tag == tag) return FALSE;
     }
     return TRUE;
 }
