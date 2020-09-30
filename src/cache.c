@@ -12,7 +12,8 @@
 #include "shell.h"
 
 
-//TODO:If conflict happens, evict one out, check whether it has dirty bit and write to memory if applicable
+//TODO:用tag和set生成address
+//TODO:从mem读数据放入缓存
 //TODO:static test
 //TODO:test
 //TODO:integrete
@@ -125,9 +126,12 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
             return;
         }
     }
-    for (; i < associativity;++i) {};
-
-    
+    CACHE_BLOCK_T *evicted_block = &(cache->cache_data[set][cache->order[set][associativity - 1]]);
+    if (evicted_block->meta_data.dirty) cache2mem(/*用tag和set生成address*/, cache);
+    //read the data from the memory, change the data in the cache
+    evicted_block->meta_data.tag = decode_address(address, cache).tag;
+    evicted_block->meta_data.dirty = FALSE;
+    reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache);
 }
 
 /*
@@ -138,7 +142,6 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
 */
 void cache2mem(uint32_t address, CACHE_T *cache) {
     CACHE_BLOCK_T *block = find_block_position(address, cache);
-    block->meta_data.valid = FALSE;
     assert(block);
     int i = 0;
     for (; i < cache->meta_data.block_size / 4; ++i) {

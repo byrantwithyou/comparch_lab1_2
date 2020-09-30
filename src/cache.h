@@ -47,7 +47,7 @@ typedef struct {
     /* the memory of the cache data is initialized at the cache_init() routine */
     CACHE_BLOCK_T cache_data[MAX_SET_COUNT][MAX_A];
     /* the order of the block in the set, the former, the ealier */
-    uint32_t order[MAX_SET_COUNT][MAX_A];
+    int order[MAX_SET_COUNT][MAX_A];
 } CACHE_T;
 
 /* define the global cache(data cache and instruction cache) */
