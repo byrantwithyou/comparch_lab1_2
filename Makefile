@@ -6,7 +6,7 @@ INPUT ?= $(wildcard inputs/*/*.x)
 all: sim
 
 sim: $(SRC)
-	gcc -g -O2 $^ -o $@
+	gcc -g -O2 $^ -o $@ -lm
 
 basesim: $(SRC)
 	gcc -g -O2 $^ -o $@
