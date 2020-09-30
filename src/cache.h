@@ -18,12 +18,14 @@
 #define MAX_BLOCK_NUM MAX(D_CACHE_C / D_CACHE_B, IR_CACHE_C / IR_CACHE_B) //max block number 
 #define MAX_BLOCK_SIZE MAX(D_CACHE_B, IR_CACHE_B) / 4 //max block size in word
 
+enum CACHE_ENUM {DATA_CACHE, IR_CACHE};
 /* data structure for a word in a cache*/
 typedef struct {
     int valid;
     int dirty;
     int recent;//whether this word is the most recent one in its set;
-    int set;//which set it belongs to 
+    int set;//which set it belongs to
+    uint32_t tag;//the tag of the block, assuming that the LSBs are all 0. 
     uint32_t data[MAX_BLOCK_SIZE];//space is allocated based on the size of the block; 
 } CACHE_BLOCK_T;
 
@@ -39,6 +41,7 @@ extern CACHE_T data_cache, ir_cache;
 
 void cache_init();
 uint32_t cache_read(uint32_t address);//read from cache
+int cache_miss(uint32_t address, enum CACHE_ENUM cache_type); //whether an adress hits the cache or misses the cache
 void cache_write(uint32_t address, uint32_t data);//write to cache
 void mem_2_cache(uint32_t address);//transfer a block from memory to cache
 void cache_2_mem(uint32_t address);//write back a dirty block to memory
