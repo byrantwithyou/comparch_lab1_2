@@ -10,6 +10,8 @@
 #include "cache.h"
 #include "shell.h"
 
+//TODO:Change the hardcoded shift amount related to A, C, B
+
 /**
 Procedure Cache_Init
 Purpose: Init the cache
@@ -39,7 +41,6 @@ void cache_init(int block_size, int associativity, int cache_size) {
 */
 int cache_miss(uint32_t address, enum CACHE_ENUM cache_type) {
     int i = 0;
-    int block_num = cache_type == DATA_CACHE? D_CACHE_C / D_CACHE_B:IR_CACHE_C / IR_CACHE_C;
     CACHE_T cache_temp = cache_type == DATA_CACHE? data_cache:ir_cache;
     uint32_t tag = cache_type == DATA_CACHE? address >> 13:address >> 11;
     int set = cache_type == DATA_CACHE? address >> 5 & 0xFF:address >> 5 & 0x3F;
@@ -56,8 +57,20 @@ int cache_miss(uint32_t address, enum CACHE_ENUM cache_type) {
 * Purpose: Read the data from the given address, assuming that the value hits the cache
 *
 */
-uint32_t cache_read(uint32_t adderss) {
-
+uint32_t cache_read(uint32_t address, enum CACHE_ENUM cache_type) {
+    int i = 0;
+    CACHE_T cache_temp = cache_type == DATA_CACHE? data_cache:ir_cache;
+    uint32_t tag = cache_type == DATA_CACHE? address >> 13:address >> 11;
+    int set = cache_type == DATA_CACHE? address >> 5 & 0xFF:address >> 5 & 0x3F;
+    int asso_temp = cache_type == DATA_CACHE? D_CACHE_A:IR_CACHE_A;
+    for (; i < asso_temp;++i){
+        CACHE_BLOCK_T *block_temp = &(cache_temp.cache_data[set][i]);
+        if (block_temp->valid && block_temp->tag == tag) {
+            return block_temp->data[address >> 2 & 0x3]; //;word offset in a block
+        }
+    }
+    assert(0);
+    return 0x0;   
 }
 
 /*
@@ -73,7 +86,7 @@ void cache_write(uint32_t address, uint32_t data) {
 * Procedure: Mem_2_Cache
 * Purpose: Transfer the data block to cache if cache misses
 */
-void mem_2_cache(uint32_t address);//transfer a block from memory to cache
+void mem_2_cache(uint32_t address, enum CACHE_ENUM cache_type);//transfer a block from memory to cache
 
 
 /*
@@ -81,6 +94,6 @@ void mem_2_cache(uint32_t address);//transfer a block from memory to cache
 * Purpose: Write back a dirty block to memory 
 * Note that this only happens when a block is evicted out of the cache, (i.e. this procedure is only called by mem_2_cache)
 */
-void cache_2_mem(uint32_t address) {
+void cache_2_mem(uint32_t address, enum CACHE_ENUM cache_type) {
 
 }

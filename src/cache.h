@@ -41,9 +41,9 @@ typedef struct {
 extern CACHE_T data_cache, ir_cache;
 
 void cache_init();
-uint32_t cache_read(uint32_t address);//read from cache
+uint32_t cache_read(uint32_t address, enum CACHE_ENUM cache_type);//read from cache
 int cache_miss(uint32_t address, enum CACHE_ENUM cache_type); //whether an adress hits the cache or misses the cache
 void cache_write(uint32_t address, uint32_t data);//write to cache
-void mem_2_cache(uint32_t address);//transfer a block from memory to cache
-void cache_2_mem(uint32_t address);//write back a dirty block to memory
+void mem_2_cache(uint32_t address, enum CACHE_ENUM cache_type);//transfer a block from memory to cache
+void cache_2_mem(uint32_t address, enum CACHE_ENUM cache_type);//write back a dirty block to memory
 #endif
