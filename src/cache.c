@@ -11,6 +11,10 @@
 #include "shell.h"
 
 //TODO:Change the hardcoded shift amount related to A, C, B
+//TODO:implement LRU
+//TODO:decode_and_find
+//TODO:If conflict happens, evict one out, check whether it has dirty bit and write to memory if applicable
+//TODO:block_meta_data
 
 /**
 Procedure Cache_Init
@@ -55,8 +59,9 @@ int cache_miss(uint32_t address, enum CACHE_ENUM cache_type) {
 /*
 * Procedure: Cache_Read
 * Purpose: Read the data from the given address, assuming that the value hits the cache
-*
+* 
 */
+
 uint32_t cache_read(uint32_t address, enum CACHE_ENUM cache_type) {
     int i = 0;
     CACHE_T cache_temp = cache_type == DATA_CACHE? data_cache:ir_cache;
@@ -66,7 +71,7 @@ uint32_t cache_read(uint32_t address, enum CACHE_ENUM cache_type) {
     for (; i < asso_temp;++i){
         CACHE_BLOCK_T *block_temp = &(cache_temp.cache_data[set][i]);
         if (block_temp->valid && block_temp->tag == tag) {
-            return block_temp->data[address >> 2 & 0x3]; //;word offset in a block
+            return block_temp->data[address >> 2 & 0x3]; //word offset in a block
         }
     }
     assert(0);
@@ -78,7 +83,18 @@ uint32_t cache_read(uint32_t address, enum CACHE_ENUM cache_type) {
 * Purpose: Write the data to the data cache, assuming that the value hits the cache
 */
 void cache_write(uint32_t address, uint32_t data) {
-
+    int i = 0;
+    uint32_t tag = address >> 13;
+    int set = address >> 5 & 0xFF;
+    int asso_temp = D_CACHE_A;
+    for (; i < asso_temp;++i){
+        CACHE_BLOCK_T *block_temp = &(data_cache.cache_data[set][i]);
+        if (block_temp->valid && block_temp->tag == tag) {
+            block_temp->data[address >> 2 & 0x3] = data;
+        }
+    }
+    assert(0);
+    return;   
 }
 
 /*
@@ -86,8 +102,33 @@ void cache_write(uint32_t address, uint32_t data) {
 * Procedure: Mem_2_Cache
 * Purpose: Transfer the data block to cache if cache misses
 */
-void mem_2_cache(uint32_t address, enum CACHE_ENUM cache_type);//transfer a block from memory to cache
+void mem_2_cache(uint32_t address, enum CACHE_ENUM cache_type) {
+    //transfer a block from memory to cache
+    //send the data from memory to block
+    //construct the block
+    int i = 0;
+    CACHE_T *cache_temp = cache_type == DATA_CACHE? &data_cache:&ir_cache;
+    uint32_t tag = cache_type == DATA_CACHE? address >> 13:address >> 11;
+    int set = cache_type == DATA_CACHE? address >> 5 & 0xFF:address >> 5 & 0x3F;
+    int asso_temp = cache_type == DATA_CACHE? D_CACHE_A:IR_CACHE_A;
+    for (; i < asso_temp;++i){
+        CACHE_BLOCK_T *block_temp = &(cache_temp->cache_data[set][i]);
+        if (!block_temp->valid) {
+            block_temp->valid = TRUE;
+            block_temp->recent = TRUE;
+            block_temp->set = set;
+            block_temp->tag = tag;
+            int j = 0;
+            for (; j < 4; ++j) {
+                block_temp->data[j] = mem_read_32(address <<2 >>2 |j);
+            }
+            return;
+        }
+    }
+    for (; i < asso_temp;++i) {};
 
+    
+}
 
 /*
 * Procedure: Cache_2_Mem
@@ -95,5 +136,19 @@ void mem_2_cache(uint32_t address, enum CACHE_ENUM cache_type);//transfer a bloc
 * Note that this only happens when a block is evicted out of the cache, (i.e. this procedure is only called by mem_2_cache)
 */
 void cache_2_mem(uint32_t address, enum CACHE_ENUM cache_type) {
-
+    int i = 0;
+    CACHE_T *cache_temp = cache_type == DATA_CACHE? &data_cache:&ir_cache;
+    uint32_t tag = cache_type == DATA_CACHE? address >> 13:address >> 11;
+    int set = cache_type == DATA_CACHE? address >> 5 & 0xFF:address >> 5 & 0x3F;
+    int asso_temp = cache_type == DATA_CACHE? D_CACHE_A:IR_CACHE_A;
+    for (; i < asso_temp;++i){
+        CACHE_BLOCK_T *block_temp = &(cache_temp->cache_data[set][i]);
+        if (block_temp->valid && block_temp->tag == tag) {
+            int j = 0;
+            for (;j < 4; ++j) {
+                mem_write_32(address >>2 <<2 | j, block_temp->data[j]);
+            }
+            return;
+        }
+    }
 }
