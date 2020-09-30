@@ -25,6 +25,7 @@
 typedef struct {
     int valid; 
     int dirty;
+    int way;       //which column the block is in
     int set;       //which set the block belongs to
     uint32_t tag;  //the tag of the block, assuming that the LSBs are all 0
 } CACHE_BLOCK_META_T;
@@ -64,6 +65,7 @@ CACHE_BLOCK_T *find_block_position(uint32_t address, CACHE_T *cache);
 double log2(double x);
 CACHE_BLOCK_META_T decode_address(uint32_t address, CACHE_T *cache);
 uint32_t traverse_block(uint32_t address, CACHE_T *cache, int word_offset);
-int get_offset_in_block (uint32_t address); 
+int get_offset_in_block(uint32_t address); 
+void reorder(int most_recently_used, int set, CACHE_T *cache);
 //==================================================================
 #endif
