@@ -9,6 +9,7 @@
 #include "pipe.h"
 #include "shell.h"
 #include "mips.h"
+#include "cache.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -34,6 +35,7 @@ void pipe_init()
 {
     memset(&pipe, 0, sizeof(Pipe_State));
     pipe.PC = 0x00400000;
+    cache_init();
 }
 
 void pipe_cycle()
