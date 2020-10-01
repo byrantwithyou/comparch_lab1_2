@@ -12,8 +12,6 @@
 #include "shell.h"
 
 
-//TODO:用tag和set生成address
-//TODO:从mem读数据放入缓存
 //TODO:static test
 //TODO:test
 //TODO:integrete
@@ -24,6 +22,7 @@ CACHE_T d_cache, ir_cache;
 double log2(double x) {
     return log(x) / log(2);
 } 
+
 CACHE_BLOCK_META_T decode_address(uint32_t address, CACHE_T *cache) {
     int block_size = cache->meta_data.block_size;
     int cache_size = cache->meta_data.cache_size;
@@ -33,13 +32,24 @@ CACHE_BLOCK_META_T decode_address(uint32_t address, CACHE_T *cache) {
     int set = address >> (2 + (int)ceil(log2(block_size))) & ((1 << (int)ceil(log2(set_count))) - 1);
     return (CACHE_BLOCK_META_T){.valid = FALSE, .dirty = FALSE, .set = set, .tag = tag, .way = -1};
 }
+
+uint32_t encode_address(int set, uint32_t tag, CACHE_T *cache) {
+    int block_size = cache->meta_data.block_size;
+    int cache_size = cache->meta_data.cache_size;
+    int associativity = cache->meta_data.associativity;
+    int offset_bitlen = 2 + (int)ceil(log2(block_size / 4));
+    return tag << (offset_bitlen + (int)ceil(log2(associativity))) + set << offset_bitlen;
+}
+
 uint32_t traverse_block(uint32_t address, CACHE_T *cache, int word_offset) {
     int offset_bitlen = (int)ceil(log2(cache->meta_data.block_size / 4)) + 2;
     return address & ~(1 << offset_bitlen - 1) + word_offset << 2;
 }
+
 int get_offset_in_block (uint32_t address) {
     return address >> 2 & (1 << (int)ceil(log2(d_cache.meta_data.block_size)) - 1);
 }
+
 void reorder(int most_recently_used, int set, CACHE_T *cache) {
     int i = 0;
     int current_order = cache->meta_data.associativity - 1;
@@ -127,8 +137,10 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
         }
     }
     CACHE_BLOCK_T *evicted_block = &(cache->cache_data[set][cache->order[set][associativity - 1]]);
-    if (evicted_block->meta_data.dirty) cache2mem(/*用tag和set生成address*/, cache);
-    //read the data from the memory, change the data in the cache
+    if (evicted_block->meta_data.dirty) cache2mem(encode_address(set, tag, cache), cache);
+    for (i = 0; i < associativity; ++i) {
+        evicted_block->data[i] = mem_read_32(traverse_block(address, cache, i));
+    }
     evicted_block->meta_data.tag = decode_address(address, cache).tag;
     evicted_block->meta_data.dirty = FALSE;
     reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache);
