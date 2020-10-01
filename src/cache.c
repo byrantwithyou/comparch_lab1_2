@@ -14,7 +14,8 @@
 
 //TODO:static test
 //TODO:test
-//TODO:integrete
+//TODO:integrete into the pipeline
+//test
 //TODO:test different parameters and validate
 CACHE_T d_cache, ir_cache;
 
