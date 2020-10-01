@@ -64,7 +64,7 @@ CACHE_BLOCK_T *find_block_position(uint32_t address, CACHE_T *cache);
 //=========================Helper Function==========================
 double log2(double x);
 CACHE_BLOCK_META_T decode_address(uint32_t address, CACHE_T *cache);
-uint32_t encode_address(int set, uint32_t tag);
+uint32_t encode_address(int set, uint32_t tag, CACHE_T *cache);
 uint32_t traverse_block(uint32_t address, CACHE_T *cache, int word_offset);
 int get_offset_in_block(uint32_t address); 
 void reorder(int most_recently_used, int set, CACHE_T *cache);
