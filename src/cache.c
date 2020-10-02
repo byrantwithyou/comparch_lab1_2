@@ -63,10 +63,17 @@ void reorder(int most_recently_used, int set, CACHE_T *cache) {
         }
         if (cache->order[set][i] == -1) break;
     }
-    for (i = 0; i < current_order; ++i) {
+    for (i = current_order - 1; i >= 0; --i) {
         cache->order[set][i + 1] = cache->order[set][i];
     }
     cache->order[set][0] = most_recently_used;
+    printf("the most recently used is %d\n", most_recently_used);
+    for (i = 0; i < cache->meta_data.associativity; ++i) {
+        printf("%4d", cache->order[set][i]);
+        if ( cache->meta_data.associativity - 1 == i) {
+            printf("\n");
+        }
+    }
 }
 
 void read_block_from_memory(CACHE_BLOCK_T *block, uint32_t address, CACHE_T *cache, int way) {
@@ -89,7 +96,7 @@ void cache_init() {
     d_cache.meta_data = (CACHE_META_T){.associativity = D_CACHE_A, .block_size = D_CACHE_B, .cache_size = D_CACHE_C};
     ir_cache.meta_data = (CACHE_META_T){.associativity = IR_CACHE_A, .block_size = IR_CACHE_B, .cache_size = IR_CACHE_C};
     //=====================================================================
-    
+    assert((D_CACHE_C / (D_CACHE_B * D_CACHE_A) >= 1) && (IR_CACHE_C / (IR_CACHE_A * IR_CACHE_B) >= 1));
     //====================Set the valid bit====================
     memset(d_cache.data, 0, sizeof d_cache.data);
     memset(ir_cache.data, 0, sizeof ir_cache.data);
@@ -149,6 +156,7 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
     CACHE_BLOCK_T *evicted_block = &(cache->data[set][cache->order[set][associativity - 1]]);
     if (evicted_block->meta_data.dirty) cache2mem(encode_address(evicted_block->meta_data.set, evicted_block->meta_data.tag, cache), cache);
     read_block_from_memory(evicted_block, address, cache, evicted_block->meta_data.way);
+    printf("kick out %d\n", evicted_block->meta_data.way);
     reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache);
 }
 
@@ -185,7 +193,7 @@ CACHE_BLOCK_T *find_block_position(uint32_t address, CACHE_T *cache) {
     }
     return NULL;
 }
-//see the order list
+//检查一下b
 //write
 //cache2mem
 int main() {
@@ -193,20 +201,15 @@ int main() {
     pipe_init();
     load_program("inputs/random/random4.x");
     FILE *fp;
-    fp = fopen("a.txt", "w");
+    fp = fopen("a.test", "w");
     int i = 0;
     uint32_t start_address = 0x00400000;
     for (; i < 2047; ++i) {
-        // printf("fetch %dth instruction\n", i);
         if (!find_block_position(start_address + i * 4, &ir_cache)) {
-            // printf("%dth instruction misses the cache\n", i);
             mem2cache(start_address + i * 4, &ir_cache);
-            // printf("The instruction is: %x\n", mem_read_32(start_address + i * 4));
             fprintf(fp, "%08x\n", mem_read_32(start_address + i * 4));
         } else {
             fprintf(fp, "%08x\n", cache_read(start_address + i * 4, &ir_cache));
-            // printf("%dth instruction hits the cache\n", i);
-            // printf("The instruction is: %x\n", cache_read(start_address + i *4, &ir_cache));
         }
     }
     fclose(fp);

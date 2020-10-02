@@ -14,7 +14,7 @@
 
 #define IR_CACHE_B 8       //block size for instruction cache in byte 
 #define IR_CACHE_C 0x20   //cache size for instruction cache in byte
-#define IR_CACHE_A 2        //associativity for instruction cache
+#define IR_CACHE_A 4        //associativity for instruction cache
 
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 /* max block size in word */

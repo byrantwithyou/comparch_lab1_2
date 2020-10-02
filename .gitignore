@@ -2,3 +2,4 @@ basesim
 sim
 *.o
 *~
+*.test
