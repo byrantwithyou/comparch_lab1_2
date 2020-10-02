@@ -185,9 +185,29 @@ CACHE_BLOCK_T *find_block_position(uint32_t address, CACHE_T *cache) {
     }
     return NULL;
 }
-
+//see the order list
+//write
+//cache2mem
 int main() {
     init_memory();
     pipe_init();
-    load_program("inputs/cache/test1.x");
+    load_program("inputs/random/random4.x");
+    FILE *fp;
+    fp = fopen("a.txt", "w");
+    int i = 0;
+    uint32_t start_address = 0x00400000;
+    for (; i < 2047; ++i) {
+        // printf("fetch %dth instruction\n", i);
+        if (!find_block_position(start_address + i * 4, &ir_cache)) {
+            // printf("%dth instruction misses the cache\n", i);
+            mem2cache(start_address + i * 4, &ir_cache);
+            // printf("The instruction is: %x\n", mem_read_32(start_address + i * 4));
+            fprintf(fp, "%08x\n", mem_read_32(start_address + i * 4));
+        } else {
+            fprintf(fp, "%08x\n", cache_read(start_address + i * 4, &ir_cache));
+            // printf("%dth instruction hits the cache\n", i);
+            // printf("The instruction is: %x\n", cache_read(start_address + i *4, &ir_cache));
+        }
+    }
+    fclose(fp);
 }
