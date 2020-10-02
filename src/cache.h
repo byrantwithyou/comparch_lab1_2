@@ -18,7 +18,7 @@
 
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 /* max block size in word */
-#define MAX_BLOCK_SIZE MAX(D_CACHE_B, IR_CACHE_B) / 4 
+#define MAX_BLOCK_SIZE MAX(D_CACHE_B, IR_CACHE_B) 
 #define MAX_SET_COUNT MAX(D_CACHE_C / (D_CACHE_B * D_CACHE_A), IR_CACHE_C / (IR_CACHE_B * IR_CACHE_A))
 #define MAX_A MAX(D_CACHE_A, IR_CACHE_A)
 
@@ -33,7 +33,7 @@ typedef struct {
 /* data structure for a block in a cache*/
 typedef struct {
     CACHE_BLOCK_META_T meta_data;
-    uint32_t data[MAX_BLOCK_SIZE];//space is allocated based on the size of the block
+    uint32_t data[MAX_BLOCK_SIZE / 4];//space is allocated based on the size of the block
 } CACHE_BLOCK_T;
 
 typedef struct {
@@ -45,7 +45,7 @@ typedef struct {
 typedef struct {
     CACHE_META_T meta_data;
     /* the memory of the cache data is initialized at the cache_init() routine */
-    CACHE_BLOCK_T cache_data[MAX_SET_COUNT][MAX_A];
+    CACHE_BLOCK_T data[MAX_SET_COUNT][MAX_A];
     /* the order of the block in the set, the former, the ealier */
     int order[MAX_SET_COUNT][MAX_A];
 } CACHE_T;
@@ -66,7 +66,8 @@ double log2(double x);
 CACHE_BLOCK_META_T decode_address(uint32_t address, CACHE_T *cache);
 uint32_t encode_address(int set, uint32_t tag, CACHE_T *cache);
 uint32_t traverse_block(uint32_t address, CACHE_T *cache, int word_offset);
-int get_offset_in_block(uint32_t address); 
+int get_offset_in_block(uint32_t address, CACHE_T *cache); 
 void reorder(int most_recently_used, int set, CACHE_T *cache);
+void read_block_from_memory(CACHE_BLOCK_T *block, uint32_t address, CACHE_T *cache, int way);
 //==================================================================
 #endif

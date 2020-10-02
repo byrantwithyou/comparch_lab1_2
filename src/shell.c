@@ -30,21 +30,7 @@ uint32_t stat_squash = 0;
 /* Main memory.                                                */
 /***************************************************************/
 
-#define MEM_DATA_START  0x10000000
-#define MEM_DATA_SIZE   0x00100000
-#define MEM_TEXT_START  0x00400000
-#define MEM_TEXT_SIZE   0x00100000
-#define MEM_STACK_START 0x7ff00000
-#define MEM_STACK_SIZE  0x00100000
-#define MEM_KDATA_START 0x90000000
-#define MEM_KDATA_SIZE  0x00100000
-#define MEM_KTEXT_START 0x80000000
-#define MEM_KTEXT_SIZE  0x00100000
 
-typedef struct {
-    uint32_t start, size;
-    uint8_t *mem;
-} mem_region_t;
 
 /* memory will be dynamically allocated at initialization */
 mem_region_t MEM_REGIONS[] = {
@@ -55,7 +41,6 @@ mem_region_t MEM_REGIONS[] = {
     { MEM_KTEXT_START, MEM_KTEXT_SIZE, NULL }
 };
 
-#define MEM_NREGIONS (sizeof(MEM_REGIONS)/sizeof(mem_region_t))
 
 int RUN_BIT = TRUE;
 
@@ -379,20 +364,20 @@ void initialize(char *program_filename, int num_prog_files) {
 /* Procedure : main                                            */
 /*                                                             */
 /***************************************************************/
-int main(int argc, char *argv[]) {                              
+// int main(int argc, char *argv[]) {                              
 
-  /* Error Checking */
-  if (argc < 2) {
-    printf("Error: usage: %s <program_file_1> <program_file_2> ...\n",
-           argv[0]);
-    exit(1);
-  }
+//   /* Error Checking */
+//   if (argc < 2) {
+//     printf("Error: usage: %s <program_file_1> <program_file_2> ...\n",
+//            argv[0]);
+//     exit(1);
+//   }
 
-  printf("MIPS Simulator\n\n");
+//   printf("MIPS Simulator\n\n");
 
-  initialize(argv[1], argc - 1);
+//   initialize(argv[1], argc - 1);
 
-  while (1)
-    get_command();
+//   while (1)
+//     get_command();
     
-}
+// }

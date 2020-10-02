@@ -10,13 +10,15 @@
 
 #include "cache.h"
 #include "shell.h"
+#include "pipe.h"
 
+//NOTE:assume that the max cache_size is 1GB(according to INT_MAX in <limits.h>), which is reasonable
 
-//TODO:static test
 //TODO:test
 //TODO:integrete into the pipeline
 //test
 //TODO:test different parameters and validate
+
 CACHE_T d_cache, ir_cache;
 
 //=================Helper Function===============
@@ -29,8 +31,8 @@ CACHE_BLOCK_META_T decode_address(uint32_t address, CACHE_T *cache) {
     int cache_size = cache->meta_data.cache_size;
     int associativity = cache->meta_data.associativity;
     int set_count = cache_size / (block_size * associativity);
-    uint32_t tag = address >> (2 + (int)ceil(log2(block_size)) + (int)ceil(log2(set_count)));
-    int set = address >> (2 + (int)ceil(log2(block_size))) & ((1 << (int)ceil(log2(set_count))) - 1);
+    uint32_t tag = address >> ((int)ceil(log2(block_size)) + (int)ceil(log2(set_count)));
+    int set = address >> ((int)ceil(log2(block_size))) & ((1 << (int)ceil(log2(set_count))) - 1);
     return (CACHE_BLOCK_META_T){.valid = FALSE, .dirty = FALSE, .set = set, .tag = tag, .way = -1};
 }
 
@@ -39,16 +41,16 @@ uint32_t encode_address(int set, uint32_t tag, CACHE_T *cache) {
     int cache_size = cache->meta_data.cache_size;
     int associativity = cache->meta_data.associativity;
     int offset_bitlen = 2 + (int)ceil(log2(block_size / 4));
-    return tag << (offset_bitlen + (int)ceil(log2(associativity))) + set << offset_bitlen;
+    return (tag << (offset_bitlen + (int)ceil(log2(cache_size / (associativity * block_size))))) + (set << offset_bitlen);
 }
 
 uint32_t traverse_block(uint32_t address, CACHE_T *cache, int word_offset) {
     int offset_bitlen = (int)ceil(log2(cache->meta_data.block_size / 4)) + 2;
-    return address & ~(1 << offset_bitlen - 1) + word_offset << 2;
+    return (address & (~((1 << offset_bitlen) - 1))) + (word_offset << 2);
 }
 
-int get_offset_in_block (uint32_t address) {
-    return address >> 2 & (1 << (int)ceil(log2(d_cache.meta_data.block_size)) - 1);
+int get_offset_in_block (uint32_t address, CACHE_T *cache) {
+    return address >> 2 & ((1 << (int)ceil(log2(cache->meta_data.block_size / 4))) - 1);
 }
 
 void reorder(int most_recently_used, int set, CACHE_T *cache) {
@@ -66,6 +68,15 @@ void reorder(int most_recently_used, int set, CACHE_T *cache) {
     }
     cache->order[set][0] = most_recently_used;
 }
+
+void read_block_from_memory(CACHE_BLOCK_T *block, uint32_t address, CACHE_T *cache, int way) {
+    int i = 0;
+    for (; i < cache->meta_data.block_size / 4; ++i) {
+        block->data[i] = mem_read_32(traverse_block(address, cache, i));}
+    int set = decode_address(address, cache).set;
+    uint32_t tag = decode_address(address, cache).tag;
+    block->meta_data = (CACHE_BLOCK_META_T){.valid = TRUE, .dirty = FALSE, .way = way, .set = set, .tag = tag};
+}
 //===============================================
 
 /**
@@ -80,12 +91,12 @@ void cache_init() {
     //=====================================================================
     
     //====================Set the valid bit====================
-    memset(d_cache.cache_data, 0, sizeof(CACHE_BLOCK_T) * D_CACHE_C / D_CACHE_B);
-    memset(ir_cache.cache_data, 0, sizeof(CACHE_BLOCK_T) * IR_CACHE_C / IR_CACHE_B);
+    memset(d_cache.data, 0, sizeof d_cache.data);
+    memset(ir_cache.data, 0, sizeof ir_cache.data);
     //=====================================================================
     int i = 0, j = 0;
-    for (; i < MAX_SET_COUNT; ++i) {
-        for (; j < MAX_A; ++j) {
+    for (i = 0; i < MAX_SET_COUNT; ++i) {
+        for (j = 0; j < MAX_A; ++j) {
             d_cache.order[i][j] = ir_cache.order[i][j] = -1;
         }
     }
@@ -101,7 +112,7 @@ uint32_t cache_read(uint32_t address, CACHE_T *cache) {
     CACHE_BLOCK_T *block = find_block_position(address, cache);
     assert(block);
     reorder(block->meta_data.way, decode_address(address, cache).set, cache);
-    return block->data[get_offset_in_block(address)];
+    return block->data[get_offset_in_block(address, cache)];
 }
 
 /*
@@ -112,7 +123,9 @@ void cache_write(uint32_t address, uint32_t data) {
     CACHE_BLOCK_T *block = find_block_position(address, &d_cache);
     assert(block);
     reorder(block->meta_data.way, decode_address(address, &d_cache).set, &d_cache);
-    block->data[get_offset_in_block(address)] = data;
+    if (data == block->data[get_offset_in_block(address, &d_cache)]) return;
+    block->data[get_offset_in_block(address, &d_cache)] = data;
+    block->meta_data.dirty = TRUE;
 }
 
 /*
@@ -126,24 +139,16 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
     int set = decode_address(address, cache).set;
     int i = 0;
     for (; i < associativity;++i){
-        CACHE_BLOCK_T *block = &(cache->cache_data[set][i]);
+        CACHE_BLOCK_T *block = &(cache->data[set][i]);
         if (!block->meta_data.valid) {
-            block->meta_data = (CACHE_BLOCK_META_T){.way = i, .valid = TRUE, .dirty = FALSE, .set = set, .tag = tag};
+            read_block_from_memory(block, address, cache, i);
             reorder(i, set, cache);
-            int j = 0;
-            for (; j < cache->meta_data.block_size / 4; ++j) {
-                block->data[j] = mem_read_32(traverse_block(address, cache, j));
-            }
             return;
         }
     }
-    CACHE_BLOCK_T *evicted_block = &(cache->cache_data[set][cache->order[set][associativity - 1]]);
-    if (evicted_block->meta_data.dirty) cache2mem(encode_address(set, tag, cache), cache);
-    for (i = 0; i < associativity; ++i) {
-        evicted_block->data[i] = mem_read_32(traverse_block(address, cache, i));
-    }
-    evicted_block->meta_data.tag = decode_address(address, cache).tag;
-    evicted_block->meta_data.dirty = FALSE;
+    CACHE_BLOCK_T *evicted_block = &(cache->data[set][cache->order[set][associativity - 1]]);
+    if (evicted_block->meta_data.dirty) cache2mem(encode_address(evicted_block->meta_data.set, evicted_block->meta_data.tag, cache), cache);
+    read_block_from_memory(evicted_block, address, cache, evicted_block->meta_data.way);
     reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache);
 }
 
@@ -173,10 +178,16 @@ CACHE_BLOCK_T *find_block_position(uint32_t address, CACHE_T *cache) {
     int set = decode_address(address, cache).set;
     uint32_t tag = decode_address(address, cache).tag;
     for (; i < associativity; ++i) {
-        CACHE_BLOCK_T *current_block = &(cache->cache_data[set][i]);
+        CACHE_BLOCK_T *current_block = &(cache->data[set][i]);
         if (current_block->meta_data.valid && (current_block->meta_data.tag == tag)) {
             return current_block;
         }
     }
     return NULL;
+}
+
+int main() {
+    init_memory();
+    pipe_init();
+    load_program("inputs/cache/test1.x");
 }
