@@ -13,7 +13,7 @@
 #include "pipe.h"
 
 //NOTE:assume that the max cache_size is 1GB(according to INT_MAX in <limits.h>), which is reasonable
-
+//add 
 //TODO:test
 //TODO:integrete into the pipeline
 //test
@@ -23,6 +23,7 @@ CACHE_T d_cache, ir_cache;
 
 //=================Helper Function===============
 double log2(double x) {
+    assert(x > 0);
     return log(x) / log(2);
 } 
 
@@ -196,6 +197,8 @@ CACHE_BLOCK_T *find_block_position(uint32_t address, CACHE_T *cache) {
 //检查一下b
 //write
 //cache2mem
+//十六个地址循环写，写的一致性
+//检查order的顺序
 int main() {
     init_memory();
     pipe_init();
