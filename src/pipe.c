@@ -675,6 +675,7 @@ void pipe_stage_fetch()
     /* if pipeline is stalled (our output slot is not empty), return */
     if (pipe.instruction_stall > 0) --pipe.instruction_stall;
     if (pipe.decode_op != NULL) return;
+    // add tricks to adjust to the basesim
     if (0 == RUN_BIT) {
         pipe.PC += 4;
         stat_inst_fetch++;
@@ -699,5 +700,4 @@ void pipe_stage_fetch()
     pipe.PC += 4;
 
     stat_inst_fetch++;
-    printf("%08x\n", op->instruction);
 }
