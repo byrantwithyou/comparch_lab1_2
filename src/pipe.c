@@ -6,8 +6,6 @@
  * Chris Fallin, 2012
  */
 
-//TODO:integrete into the pipeline
-//test
 //TODO:test different parameters and validate
 
 #include "pipe.h"
