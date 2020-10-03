@@ -66,13 +66,6 @@ void reorder(int most_recently_used, int set, CACHE_T *cache) {
         cache->order[set][i + 1] = cache->order[set][i];
     }
     cache->order[set][0] = most_recently_used;
-    printf("the most recently used is %d\n", most_recently_used);
-    for (i = 0; i < cache->meta_data.associativity; ++i) {
-        printf("%4d", cache->order[set][i]);
-        if ( cache->meta_data.associativity - 1 == i) {
-            printf("\n");
-        }
-    }
 }
 
 void read_block_from_memory(CACHE_BLOCK_T *block, uint32_t address, CACHE_T *cache, int way) {
@@ -155,7 +148,6 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
     CACHE_BLOCK_T *evicted_block = &(cache->data[set][cache->order[set][associativity - 1]]);
     if (evicted_block->meta_data.dirty) cache2mem(encode_address(evicted_block->meta_data.set, evicted_block->meta_data.tag, cache), cache);
     read_block_from_memory(evicted_block, address, cache, evicted_block->meta_data.way);
-    printf("kick out %d\n", evicted_block->meta_data.way);
     reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache);
 }
 
@@ -191,35 +183,4 @@ CACHE_BLOCK_T *find_block_position(uint32_t address, CACHE_T *cache) {
         }
     }
     return NULL;
-}
-int main() {
-    init_memory();
-    pipe_init();
-    // load_program("inputs/random/random4.x");
-    uint32_t start_address = 0x00400000;
-    int i;
-    FILE *fp;
-    fp = fopen("a.test", "w");
-    for (i = 0; i < 16; ++i) {
-        uint32_t address = start_address + i * 4;
-        if (!find_block_position(address, &d_cache)) {
-            mem2cache(address, &d_cache);
-        }
-        cache_write(address, address);
-    }
-    for (i = 0; i < 16; ++i) {
-        uint32_t address = start_address + i * 4;
-        if (!find_block_position(address, &d_cache)) {
-            mem2cache(address, &d_cache);
-        }
-        cache_write(address, address + 8);
-    }
-    for (i = 0; i < 16; ++i) {
-        uint32_t address = start_address + i * 4;
-        if (!find_block_position(address, &d_cache)) {
-            mem2cache(address, &d_cache);
-        }
-        fprintf(fp, "%08x\n", cache_read(address, &d_cache));
-    }
-    fclose(fp);
 }
