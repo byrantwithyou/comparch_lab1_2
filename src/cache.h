@@ -8,9 +8,9 @@
 #define _CACHE_H_
 
 /* various cache parameters */
-#define D_CACHE_B 32        //block size for data cache in byte 
-#define D_CACHE_C 0x10000   //cache size for data cache in byte
-#define D_CACHE_A 8         //associativity for data cache
+#define D_CACHE_B 8         //block size for data cache in byte 
+#define D_CACHE_C 0x20   //cache size for data cache in byte
+#define D_CACHE_A 4         //associativity for data cache
 
 #define IR_CACHE_B 8       //block size for instruction cache in byte 
 #define IR_CACHE_C 0x20   //cache size for instruction cache in byte

@@ -13,8 +13,6 @@
 #include "pipe.h"
 
 //NOTE:assume that the max cache_size is 1GB(according to INT_MAX in <limits.h>), which is reasonable
-//add 
-//TODO:test
 //TODO:integrete into the pipeline
 //test
 //TODO:test different parameters and validate
@@ -98,7 +96,7 @@ void cache_init() {
     ir_cache.meta_data = (CACHE_META_T){.associativity = IR_CACHE_A, .block_size = IR_CACHE_B, .cache_size = IR_CACHE_C};
     //=====================================================================
     assert((D_CACHE_C / (D_CACHE_B * D_CACHE_A) >= 1) && (IR_CACHE_C / (IR_CACHE_A * IR_CACHE_B) >= 1));
-    //====================Set the valid bit====================
+    //====================Set the valid bit================================
     memset(d_cache.data, 0, sizeof d_cache.data);
     memset(ir_cache.data, 0, sizeof ir_cache.data);
     //=====================================================================
@@ -194,26 +192,34 @@ CACHE_BLOCK_T *find_block_position(uint32_t address, CACHE_T *cache) {
     }
     return NULL;
 }
-//检查一下b
-//write
-//cache2mem
-//十六个地址循环写，写的一致性
-//检查order的顺序
 int main() {
     init_memory();
     pipe_init();
-    load_program("inputs/random/random4.x");
+    // load_program("inputs/random/random4.x");
+    uint32_t start_address = 0x00400000;
+    int i;
     FILE *fp;
     fp = fopen("a.test", "w");
-    int i = 0;
-    uint32_t start_address = 0x00400000;
-    for (; i < 2047; ++i) {
-        if (!find_block_position(start_address + i * 4, &ir_cache)) {
-            mem2cache(start_address + i * 4, &ir_cache);
-            fprintf(fp, "%08x\n", mem_read_32(start_address + i * 4));
-        } else {
-            fprintf(fp, "%08x\n", cache_read(start_address + i * 4, &ir_cache));
+    for (i = 0; i < 16; ++i) {
+        uint32_t address = start_address + i * 4;
+        if (!find_block_position(address, &d_cache)) {
+            mem2cache(address, &d_cache);
         }
+        cache_write(address, address);
+    }
+    for (i = 0; i < 16; ++i) {
+        uint32_t address = start_address + i * 4;
+        if (!find_block_position(address, &d_cache)) {
+            mem2cache(address, &d_cache);
+        }
+        cache_write(address, address + 8);
+    }
+    for (i = 0; i < 16; ++i) {
+        uint32_t address = start_address + i * 4;
+        if (!find_block_position(address, &d_cache)) {
+            mem2cache(address, &d_cache);
+        }
+        fprintf(fp, "%08x\n", cache_read(address, &d_cache));
     }
     fclose(fp);
 }
