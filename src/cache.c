@@ -13,9 +13,6 @@
 #include "pipe.h"
 
 //NOTE:assume that the max cache_size is 1GB(according to INT_MAX in <limits.h>), which is reasonable
-//TODO:integrete into the pipeline
-//test
-//TODO:test different parameters and validate
 
 CACHE_T d_cache, ir_cache;
 

@@ -6,6 +6,10 @@
  * Chris Fallin, 2012
  */
 
+//TODO:integrete into the pipeline
+//test
+//TODO:test different parameters and validate
+
 #include "pipe.h"
 #include "shell.h"
 #include "mips.h"
@@ -669,15 +673,25 @@ void pipe_stage_decode()
 void pipe_stage_fetch()
 {
     /* if pipeline is stalled (our output slot is not empty), return */
-    if (pipe.decode_op != NULL)
+    if (pipe.instruction_stall > 0) --pipe.instruction_stall;
+    if (pipe.decode_op != NULL) return;
+    if (0 == RUN_BIT) {
+        pipe.PC += 4;
+        stat_inst_fetch++;
         return;
-
+    } 
+    if (pipe.instruction_stall > 0) return;
+    if (!find_block_position(pipe.PC, &ir_cache)) {
+        mem2cache(pipe.PC, &ir_cache);
+        pipe.instruction_stall = 50;
+        return;
+    }
     /* Allocate an op and send it down the pipeline. */
     Pipe_Op *op = malloc(sizeof(Pipe_Op));
     memset(op, 0, sizeof(Pipe_Op));
     op->reg_src1 = op->reg_src2 = op->reg_dst = -1;
 
-    op->instruction = mem_read_32(pipe.PC);
+    op->instruction = cache_read(pipe.PC, &ir_cache);
     op->pc = pipe.PC;
     pipe.decode_op = op;
 

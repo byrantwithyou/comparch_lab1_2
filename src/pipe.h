@@ -89,6 +89,7 @@ typedef struct Pipe_State {
     int multiplier_stall; /* number of remaining cycles until HI/LO are ready */
 
     /* place other information here as necessary */
+    int instruction_stall; /* number of remaining cycles until the instruction is ready if cahce misses */
 
 } Pipe_State;
 
