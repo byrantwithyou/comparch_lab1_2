@@ -151,8 +151,15 @@ void pipe_stage_mem()
     Pipe_Op *op = pipe.mem_op;
 
     uint32_t val = 0;
-    if (op->is_mem) 
-        val = mem_read_32(op->mem_addr & ~3);
+    uint32_t address = op->mem_addr & ~3; 
+    if (op->is_mem && op->opcode != OP_SW) {
+        if (!find_block_position(address, &d_cache)) {
+            mem2cache(address, &d_cache);
+            pipe.mem_stall = 50;
+            return;
+        }
+        val = cache_read(address, &d_cache);
+    }
 
     switch (op->opcode) {
         case OP_LW:
@@ -208,8 +215,12 @@ void pipe_stage_mem()
                 case 2: val = (val & 0xFF00FFFF) | ((op->mem_value & 0xFF) << 16); break;
                 case 3: val = (val & 0x00FFFFFF) | ((op->mem_value & 0xFF) << 24); break;
             }
-
-            mem_write_32(op->mem_addr & ~3, val);
+            if (!find_block_position(address, &d_cache)) {
+                mem2cache(address, &d_cache);
+                pipe.mem_stall = 50;
+                return;
+            }
+            cache_write(op->mem_addr & ~3, val);
             break;
 
         case OP_SH:
@@ -224,12 +235,22 @@ void pipe_stage_mem()
             printf("new word %08x\n", val);
 #endif
 
-            mem_write_32(op->mem_addr & ~3, val);
+            if (!find_block_position(address, &d_cache)) {
+                mem2cache(address, &d_cache);
+                pipe.mem_stall = 50;
+                return;
+            }
+            cache_write(op->mem_addr & ~3, val);
             break;
 
         case OP_SW:
             val = op->mem_value;
-            mem_write_32(op->mem_addr & ~3, val);
+            if (!find_block_position(address, &d_cache)) {
+                mem2cache(address, &d_cache);
+                pipe.mem_stall = 50;
+                return;
+            }
+            cache_write(op->mem_addr & ~3, val);
             break;
     }
 
