@@ -699,4 +699,5 @@ void pipe_stage_fetch()
     pipe.PC += 4;
 
     stat_inst_fetch++;
+    printf("%08x\n", op->instruction);
 }
