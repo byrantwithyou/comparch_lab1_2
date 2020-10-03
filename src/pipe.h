@@ -90,7 +90,7 @@ typedef struct Pipe_State {
 
     /* place other information here as necessary */
     int instruction_stall; /* number of remaining cycles until the instruction is ready if cahce misses */
-
+    int mem_stall;         /* number of remaining cycles until the memory (read or write) is ready if cache misses */
 } Pipe_State;
 
 /* global variable -- pipeline state */

@@ -143,14 +143,15 @@ void pipe_stage_wb()
 void pipe_stage_mem()
 {
     /* if there is no instruction in this pipeline stage, we are done */
+    if (pipe.mem_stall > 0) --pipe.mem_stall;
     if (!pipe.mem_op)
         return;
-
+    if (pipe.mem_stall > 0) return;
     /* grab the op out of our input slot */
     Pipe_Op *op = pipe.mem_op;
 
     uint32_t val = 0;
-    if (op->is_mem)
+    if (op->is_mem) 
         val = mem_read_32(op->mem_addr & ~3);
 
     switch (op->opcode) {
