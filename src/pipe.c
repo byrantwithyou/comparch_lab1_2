@@ -152,6 +152,7 @@ void pipe_stage_mem()
     uint32_t address = op->mem_addr & ~3; 
     if (op->is_mem && op->opcode != OP_SW) {
         if (!find_block_position(address, &d_cache)) {
+            // if there's a miss in data cache, stall the mem stage
             mem2cache(address, &d_cache);
             pipe.mem_stall = 50;
             return;
@@ -215,9 +216,11 @@ void pipe_stage_mem()
             }
             if (!find_block_position(address, &d_cache)) {
                 mem2cache(address, &d_cache);
+                // if there's a miss in data cache, stall the mem stage
                 pipe.mem_stall = 50;
                 return;
             }
+            // directly write to cache
             cache_write(op->mem_addr & ~3, val);
             break;
 
@@ -234,20 +237,24 @@ void pipe_stage_mem()
 #endif
 
             if (!find_block_position(address, &d_cache)) {
+                // if there's a miss in data cache, stall the mem stage
                 mem2cache(address, &d_cache);
                 pipe.mem_stall = 50;
                 return;
             }
+            // directly write to cache
             cache_write(op->mem_addr & ~3, val);
             break;
 
         case OP_SW:
             val = op->mem_value;
             if (!find_block_position(address, &d_cache)) {
+                // if there's a miss in data cache, stall the mem stage
                 mem2cache(address, &d_cache);
                 pipe.mem_stall = 50;
                 return;
             }
+            // directly write to cache
             cache_write(op->mem_addr & ~3, val);
             break;
     }
@@ -703,6 +710,7 @@ void pipe_stage_fetch()
     } 
     if (pipe.instruction_stall > 0) return;
     if (!find_block_position(pipe.PC, &ir_cache)) {
+        // if there is a cache miss, stall the fetch stage, bring the memory block to the cache
         mem2cache(pipe.PC, &ir_cache);
         pipe.instruction_stall = 50;
         return;
@@ -712,6 +720,7 @@ void pipe_stage_fetch()
     memset(op, 0, sizeof(Pipe_Op));
     op->reg_src1 = op->reg_src2 = op->reg_dst = -1;
 
+    // read directly from the cache
     op->instruction = cache_read(pipe.PC, &ir_cache);
     op->pc = pipe.PC;
     pipe.decode_op = op;

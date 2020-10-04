@@ -8,20 +8,23 @@
 #define _CACHE_H_
 
 /* various cache parameters */
-#define D_CACHE_B 32         //block size for data cache in byte 
+#define D_CACHE_B 32           //block size for data cache in byte 
 #define D_CACHE_C 0x10000      //cache size for data cache in byte
-#define D_CACHE_A 8         //associativity for data cache
+#define D_CACHE_A 8            //associativity for data cache
 
-#define IR_CACHE_B 32        //block size for instruction cache in byte 
-#define IR_CACHE_C 0x2000     //cache size for instruction cache in byte
-#define IR_CACHE_A 4        //associativity for instruction cache
+#define IR_CACHE_B 32          //block size for instruction cache in byte 
+#define IR_CACHE_C 0x2000      //cache size for instruction cache in byte
+#define IR_CACHE_A 4           //associativity for instruction cache
 
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
-/* max block size in word */
+/* max block size in byte */
 #define MAX_BLOCK_SIZE MAX(D_CACHE_B, IR_CACHE_B) 
+/* max set number */
 #define MAX_SET_COUNT MAX(D_CACHE_C / (D_CACHE_B * D_CACHE_A), IR_CACHE_C / (IR_CACHE_B * IR_CACHE_A))
+/* max associativity */
 #define MAX_A MAX(D_CACHE_A, IR_CACHE_A)
 
+/* data structure of the meta data of a cache block(line) */
 typedef struct {
     int valid; 
     int dirty;
@@ -36,6 +39,7 @@ typedef struct {
     uint32_t data[MAX_BLOCK_SIZE / 4];//space is allocated based on the size of the block
 } CACHE_BLOCK_T;
 
+/* data structure of the cache meta data */
 typedef struct {
     int associativity;
     int block_size;     //how many byte a block stores
@@ -63,11 +67,17 @@ void cache2mem(uint32_t address, CACHE_T *cache);       //write back a dirty blo
 CACHE_BLOCK_T *find_block_position(uint32_t address, CACHE_T *cache);
 //=========================Helper Function==========================
 double log2(double x);
+/* decode the address to get the cache line meta data */
 CACHE_BLOCK_META_T decode_address(uint32_t address, CACHE_T *cache);
+/* encode the address given the set and the tag */
 uint32_t encode_address(int set, uint32_t tag, CACHE_T *cache);
+/* generate all the addresses inside one block */
 uint32_t traverse_block(uint32_t address, CACHE_T *cache, int word_offset);
-int get_offset_in_block(uint32_t address, CACHE_T *cache); 
+/* get the word offset inside a cache line */
+int get_offset_in_block(uint32_t address, CACHE_T *cache);
+/* re-generate the order list in the cache for LRU implementation */ 
 void reorder(int most_recently_used, int set, CACHE_T *cache);
+/* read the whole cache line from the memory */
 void read_block_from_memory(CACHE_BLOCK_T *block, uint32_t address, CACHE_T *cache, int way);
 //==================================================================
 #endif

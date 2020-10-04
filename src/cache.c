@@ -22,6 +22,10 @@ double log2(double x) {
     return log(x) / log(2);
 } 
 
+/*
+* Procudure: Decode_Address
+* Purpose: Decode the address to get the cache line meta data 
+*/
 CACHE_BLOCK_META_T decode_address(uint32_t address, CACHE_T *cache) {
     int block_size = cache->meta_data.block_size;
     int cache_size = cache->meta_data.cache_size;
@@ -32,6 +36,10 @@ CACHE_BLOCK_META_T decode_address(uint32_t address, CACHE_T *cache) {
     return (CACHE_BLOCK_META_T){.valid = FALSE, .dirty = FALSE, .set = set, .tag = tag, .way = -1};
 }
 
+/*
+* Procudure: Encode_Address
+* Purpose: Encode the address given the cache line meta data 
+*/
 uint32_t encode_address(int set, uint32_t tag, CACHE_T *cache) {
     int block_size = cache->meta_data.block_size;
     int cache_size = cache->meta_data.cache_size;
@@ -40,18 +48,32 @@ uint32_t encode_address(int set, uint32_t tag, CACHE_T *cache) {
     return (tag << (offset_bitlen + (int)ceil(log2(cache_size / (associativity * block_size))))) + (set << offset_bitlen);
 }
 
+/*
+* Procudure: Traverse_Block
+* Purpose: Generate all the address in a block given the word offset inside a block 
+*/
 uint32_t traverse_block(uint32_t address, CACHE_T *cache, int word_offset) {
     int offset_bitlen = (int)ceil(log2(cache->meta_data.block_size / 4)) + 2;
     return (address & (~((1 << offset_bitlen) - 1))) + (word_offset << 2);
 }
 
+/*
+* Procudure: get_offset_in_block
+* Purpose: get the word offset inside a cache line 
+*/
+
 int get_offset_in_block (uint32_t address, CACHE_T *cache) {
     return address >> 2 & ((1 << (int)ceil(log2(cache->meta_data.block_size / 4))) - 1);
 }
 
+/*
+* Procudure: Reorder
+* Purpose: regenerate the order list accordingly to implement LRU 
+*/
 void reorder(int most_recently_used, int set, CACHE_T *cache) {
     int i = 0;
     int current_order = cache->meta_data.associativity - 1;
+    // find the previous order of the block
     for (; i < cache->meta_data.associativity - 1; ++i) {
         if (cache->order[set][i] == most_recently_used) {
             current_order = i;
@@ -60,11 +82,17 @@ void reorder(int most_recently_used, int set, CACHE_T *cache) {
         if (cache->order[set][i] == -1) break;
     }
     for (i = current_order - 1; i >= 0; --i) {
+        // move others' order
         cache->order[set][i + 1] = cache->order[set][i];
     }
+    // set the block to most-recently-used
     cache->order[set][0] = most_recently_used;
 }
 
+/*
+* Procudure: Read_Block_From_Memory
+* Purpose: read the whole block from the memory to the cache 
+*/
 void read_block_from_memory(CACHE_BLOCK_T *block, uint32_t address, CACHE_T *cache, int way) {
     int i = 0;
     for (; i < cache->meta_data.block_size / 4; ++i) {
@@ -137,11 +165,13 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
     for (; i < associativity;++i){
         CACHE_BLOCK_T *block = &(cache->data[set][i]);
         if (!block->meta_data.valid) {
+            // if find an empty position in the cache, directly insert the block
             read_block_from_memory(block, address, cache, i);
             reorder(i, set, cache);
             return;
         }
     }
+    // otherwise, find an evicted_block
     CACHE_BLOCK_T *evicted_block = &(cache->data[set][cache->order[set][associativity - 1]]);
     if (evicted_block->meta_data.dirty) cache2mem(encode_address(evicted_block->meta_data.set, evicted_block->meta_data.tag, cache), cache);
     read_block_from_memory(evicted_block, address, cache, evicted_block->meta_data.way);
