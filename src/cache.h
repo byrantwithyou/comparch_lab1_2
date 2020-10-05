@@ -24,6 +24,9 @@
 /* max associativity */
 #define MAX_A MAX(D_CACHE_A, IR_CACHE_A)
 
+/* The Policy for insert and replacement */
+#define POLICY "LRU"
+
 /* data structure of the meta data of a cache block(line) */
 typedef struct {
     int valid; 
@@ -75,9 +78,11 @@ uint32_t encode_address(int set, uint32_t tag, CACHE_T *cache);
 uint32_t traverse_block(uint32_t address, CACHE_T *cache, int word_offset);
 /* get the word offset inside a cache line */
 int get_offset_in_block(uint32_t address, CACHE_T *cache);
-/* re-generate the order list in the cache for LRU implementation */ 
+/* re-generate the order list in the cache for different policies */ 
 void reorder(int most_recently_used, int set, CACHE_T *cache);
 /* read the whole cache line from the memory */
 void read_block_from_memory(CACHE_BLOCK_T *block, uint32_t address, CACHE_T *cache, int way);
+/* find the evicted block according to different policies */
+CACHE_BLOCK_T *find_evicted_block(int set, CACHE_T *cache);
 //==================================================================
 #endif

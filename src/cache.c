@@ -68,25 +68,37 @@ int get_offset_in_block (uint32_t address, CACHE_T *cache) {
 
 /*
 * Procudure: Reorder
-* Purpose: regenerate the order list accordingly to implement LRU 
+* Purpose: regenerate the order list according to different policy 
 */
 void reorder(int most_recently_used, int set, CACHE_T *cache) {
-    int i = 0;
-    int current_order = cache->meta_data.associativity - 1;
-    // find the previous order of the block
-    for (; i < cache->meta_data.associativity - 1; ++i) {
-        if (cache->order[set][i] == most_recently_used) {
-            current_order = i;
-            break;
+    if (strcmp(POLICY, "LRU") == 0) {
+        int i = 0;
+        int current_order = cache->meta_data.associativity - 1;
+        // find the previous order of the block
+        for (; i < cache->meta_data.associativity - 1; ++i) {
+            if (cache->order[set][i] == most_recently_used) {
+                current_order = i;
+                break;
+            }
+            if (cache->order[set][i] == -1) break;
         }
-        if (cache->order[set][i] == -1) break;
+        for (i = current_order - 1; i >= 0; --i) {
+            // move others' order
+            cache->order[set][i + 1] = cache->order[set][i];
+        }
+        // set the block to most-recently-used
+        cache->order[set][0] = most_recently_used;
     }
-    for (i = current_order - 1; i >= 0; --i) {
-        // move others' order
-        cache->order[set][i + 1] = cache->order[set][i];
+}
+
+/*
+* Procudure: Reorder
+* Purpose: regenerate the order list according to different policy 
+*/
+CACHE_BLOCK_T *find_evicted_block(int set, CACHE_T *cache) {
+    if (strcmp(POLICY, "LRU") == 0) {
+        return &(cache->data[set][cache->order[set][cache->meta_data.associativity - 1]]);
     }
-    // set the block to most-recently-used
-    cache->order[set][0] = most_recently_used;
 }
 
 /*
@@ -172,7 +184,7 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
         }
     }
     // otherwise, find an evicted_block
-    CACHE_BLOCK_T *evicted_block = &(cache->data[set][cache->order[set][associativity - 1]]);
+    CACHE_BLOCK_T *evicted_block = find_evicted_block(set, cache);
     if (evicted_block->meta_data.dirty) cache2mem(encode_address(evicted_block->meta_data.set, evicted_block->meta_data.tag, cache), cache);
     read_block_from_memory(evicted_block, address, cache, evicted_block->meta_data.way);
     reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache);
