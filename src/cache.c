@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <time.h>
 
 #include "cache.h"
 #include "shell.h"
@@ -71,7 +72,7 @@ int get_offset_in_block (uint32_t address, CACHE_T *cache) {
 * Purpose: regenerate the order list according to different policy 
 */
 void reorder(int most_recently_used, int set, CACHE_T *cache) {
-    if (strcmp(POLICY, "LRU") == 0) {
+    if (strcmp(INSERT_POLICY, "MRU") == 0) {
         int i = 0;
         int current_order = cache->meta_data.associativity - 1;
         // find the previous order of the block
@@ -96,8 +97,10 @@ void reorder(int most_recently_used, int set, CACHE_T *cache) {
 * Purpose: regenerate the order list according to different policy 
 */
 CACHE_BLOCK_T *find_evicted_block(int set, CACHE_T *cache) {
-    if (strcmp(POLICY, "LRU") == 0) {
+    if (strcmp(REPLACE_POLICY, "LRU") == 0) {
         return &(cache->data[set][cache->order[set][cache->meta_data.associativity - 1]]);
+    } else if (strcmp(REPLACE_POLICY, "RANDOM") == 0) {
+        return &(cache->data[set][rand() % (cache->meta_data.associativity)]);
     }
 }
 
@@ -121,6 +124,8 @@ void read_block_from_memory(CACHE_BLOCK_T *block, uint32_t address, CACHE_T *cac
 * Purpose: Init the cache
 **/
 void cache_init() {
+    // use for random replacement
+    srand(time(NULL));
     //====================Initialize the cache paerameter==================
     d_cache.meta_data = (CACHE_META_T){.associativity = D_CACHE_A, .block_size = D_CACHE_B, .cache_size = D_CACHE_C};
     ir_cache.meta_data = (CACHE_META_T){.associativity = IR_CACHE_A, .block_size = IR_CACHE_B, .cache_size = IR_CACHE_C};

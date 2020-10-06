@@ -25,7 +25,11 @@
 #define MAX_A MAX(D_CACHE_A, IR_CACHE_A)
 
 /* The Policy for insert and replacement */
-#define POLICY "LRU"
+#define INSERT_POLICY "MRU"
+#define REPLACE_POLICY "RANDOM"
+
+/* For some, it includes both insert and replacment policy */
+#define POLICY
 
 /* data structure of the meta data of a cache block(line) */
 typedef struct {
