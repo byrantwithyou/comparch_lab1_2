@@ -26,7 +26,7 @@
 
 /* The Policy for insert and replacement */
 #define INSERT_POLICY "MRU"
-#define REPLACE_POLICY "RANDOM"
+#define REPLACE_POLICY "LRU"
 
 /* For some, it includes both insert and replacment policy */
 #define POLICY ""
