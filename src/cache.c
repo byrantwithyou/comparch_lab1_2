@@ -72,7 +72,7 @@ int get_offset_in_block (uint32_t address, CACHE_T *cache) {
 * Purpose: regenerate the order list according to different policy 
 */
 void reorder(int most_recently_used, int set, CACHE_T *cache) {
-    if (strcmp(INSERT_POLICY, "MRU") == 0) {
+    if ((strcmp(INSERT_POLICY, "MRU") == 0) || (strcmp(POLICY, "FIFO") == 0)) {
         int i = 0;
         int current_order = cache->meta_data.associativity - 1;
         // find the previous order of the block
@@ -107,7 +107,7 @@ void reorder(int most_recently_used, int set, CACHE_T *cache) {
 * Purpose: find the evicted block according to the replacement policy 
 */
 CACHE_BLOCK_T *find_evicted_block(int set, CACHE_T *cache) {
-    if (strcmp(REPLACE_POLICY, "LRU") == 0) {
+    if ((strcmp(REPLACE_POLICY, "LRU") == 0) || (strcmp(POLICY, "FIFO") == 0)) {
         return &(cache->data[set][cache->order[set][cache->meta_data.associativity - 1]]);
     } else if (strcmp(REPLACE_POLICY, "RANDOM") == 0) {
         return &(cache->data[set][rand() % (cache->meta_data.associativity)]);
@@ -165,10 +165,12 @@ void cache_init() {
 uint32_t cache_read(uint32_t address, CACHE_T *cache) {
     CACHE_BLOCK_T *block = find_block_position(address, cache);
     assert(block);
-    if (cache == &ir_cache) {
-        printf("BLOCK %d\n", block->meta_data.way);
+    if (strcmp(POLICY, "FIFO") != 0) {
+        if (cache == &ir_cache) {
+            printf("BLOCK %d\n", block->meta_data.way);
+        }
+        reorder(block->meta_data.way, decode_address(address, cache).set, cache);
     }
-    reorder(block->meta_data.way, decode_address(address, cache).set, cache);
     return block->data[get_offset_in_block(address, cache)];
 }
 
@@ -179,7 +181,9 @@ uint32_t cache_read(uint32_t address, CACHE_T *cache) {
 void cache_write(uint32_t address, uint32_t data) {
     CACHE_BLOCK_T *block = find_block_position(address, &d_cache);
     assert(block);
-    reorder(block->meta_data.way, decode_address(address, &d_cache).set, &d_cache);
+    if (strcmp(POLICY, "FIFO") != 0) {
+        reorder(block->meta_data.way, decode_address(address, &d_cache).set, &d_cache);
+    }
     if (data == block->data[get_offset_in_block(address, &d_cache)]) return;
     block->data[get_offset_in_block(address, &d_cache)] = data;
     block->meta_data.dirty = TRUE;
