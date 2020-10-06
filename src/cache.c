@@ -90,11 +90,21 @@ void reorder(int most_recently_used, int set, CACHE_T *cache) {
         // set the block to most-recently-used
         cache->order[set][0] = most_recently_used;
     }
+    if (cache == &ir_cache) {
+        int i = 0;
+        for (; i < cache->meta_data.associativity; ++i) {
+            printf("%d ", cache->order[set][i]);
+            if (i == cache->meta_data.associativity - 1){
+                printf("\n");
+            }
+        }
+
+    }
 }
 
 /*
-* Procudure: Reorder
-* Purpose: regenerate the order list according to different policy 
+* Procudure: Find_Evicted_Block
+* Purpose: find the evicted block according to the replacement policy 
 */
 CACHE_BLOCK_T *find_evicted_block(int set, CACHE_T *cache) {
     if (strcmp(REPLACE_POLICY, "LRU") == 0) {
@@ -155,6 +165,9 @@ void cache_init() {
 uint32_t cache_read(uint32_t address, CACHE_T *cache) {
     CACHE_BLOCK_T *block = find_block_position(address, cache);
     assert(block);
+    if (cache == &ir_cache) {
+        printf("BLOCK %d\n", block->meta_data.way);
+    }
     reorder(block->meta_data.way, decode_address(address, cache).set, cache);
     return block->data[get_offset_in_block(address, cache)];
 }
@@ -187,6 +200,9 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
         if (!block->meta_data.valid) {
             // if find an empty position in the cache, directly insert the block
             read_block_from_memory(block, address, cache, i);
+            if (cache == &ir_cache) {
+                printf("BLOCK %d\n", i);
+            }
             reorder(i, set, cache);
             return;
         }
@@ -195,6 +211,9 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
     CACHE_BLOCK_T *evicted_block = find_evicted_block(set, cache);
     if (evicted_block->meta_data.dirty) cache2mem(encode_address(evicted_block->meta_data.set, evicted_block->meta_data.tag, cache), cache);
     read_block_from_memory(evicted_block, address, cache, evicted_block->meta_data.way);
+    if (cache == &ir_cache) {
+        printf("BLOCK %d\n", evicted_block->meta_data.way);
+    }
     reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache);
 }
 
