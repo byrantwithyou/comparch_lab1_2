@@ -131,6 +131,9 @@ void cache_init() {
     ir_cache.meta_data = (CACHE_META_T){.associativity = IR_CACHE_A, .block_size = IR_CACHE_B, .cache_size = IR_CACHE_C};
     //=====================================================================
     assert((D_CACHE_C / (D_CACHE_B * D_CACHE_A) >= 1) && (IR_CACHE_C / (IR_CACHE_A * IR_CACHE_B) >= 1));
+    int policy_check_foo = (strcmp(POLICY, "") == 0) && (strcmp(INSERT_POLICY, "")) != 0 && (strcmp(REPLACE_POLICY, "")) != 0;
+    int policy_check_bar = (strcmp(POLICY, "") != 0) && (strcmp(INSERT_POLICY, "") == 0) && (strcmp(REPLACE_POLICY, "") == 0);
+    assert(policy_check_foo || policy_check_bar);
     //====================Set the valid bit================================
     memset(d_cache.data, 0, sizeof d_cache.data);
     memset(ir_cache.data, 0, sizeof ir_cache.data);

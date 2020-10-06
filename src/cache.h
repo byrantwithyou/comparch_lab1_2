@@ -29,7 +29,7 @@
 #define REPLACE_POLICY "RANDOM"
 
 /* For some, it includes both insert and replacment policy */
-#define POLICY
+#define POLICY ""
 
 /* data structure of the meta data of a cache block(line) */
 typedef struct {
