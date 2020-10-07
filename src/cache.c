@@ -89,11 +89,15 @@ void reorder(int most_recently_used, int set, CACHE_T *cache) {
         }
         // set the block to most-recently-used
         cache->order[set][0] = most_recently_used;
+    } else if (strcmp(POLICY, "LFU") == 0) {
+        printf("run here");
+        ++cache->frequency[set][most_recently_used];
     }
     if (cache == &ir_cache) {
+        printf("touch BLOCK %d\n", most_recently_used);
         int i = 0;
         for (; i < cache->meta_data.associativity; ++i) {
-            printf("%d ", cache->order[set][i]);
+            printf("%d ", cache->frequency[set][i]);
             if (i == cache->meta_data.associativity - 1){
                 printf("\n");
             }
@@ -107,10 +111,27 @@ void reorder(int most_recently_used, int set, CACHE_T *cache) {
 * Purpose: find the evicted block according to the replacement policy 
 */
 CACHE_BLOCK_T *find_evicted_block(int set, CACHE_T *cache) {
+    int lfu = 0, i = 0;
+    int least_frequency = cache->frequency[set][0];
+    for (; i < cache->meta_data.associativity; ++i) {
+        if (cache->frequency[set][i] < least_frequency) {
+            least_frequency = cache->frequency[set][i];
+            lfu = i;
+        }
+    }
     if ((strcmp(REPLACE_POLICY, "LRU") == 0) || (strcmp(POLICY, "FIFO") == 0)) {
         return &(cache->data[set][cache->order[set][cache->meta_data.associativity - 1]]);
     } else if (strcmp(REPLACE_POLICY, "RANDOM") == 0) {
         return &(cache->data[set][rand() % (cache->meta_data.associativity)]);
+    } else if (strcmp(POLICY, "LFU") == 0) {
+        cache->frequency[set][lfu] = 0;
+        for (int i = 0; i < ir_cache.meta_data.associativity; ++i) {
+            printf("%d ", ir_cache.frequency[set][i]);
+            if (i == ir_cache.meta_data.associativity - 1) {
+                printf("\n");
+            }
+        }
+        return &(cache->data[set][lfu]);
     }
 }
 
@@ -167,7 +188,7 @@ uint32_t cache_read(uint32_t address, CACHE_T *cache) {
     assert(block);
     if (strcmp(POLICY, "FIFO") != 0) {
         if (cache == &ir_cache) {
-            printf("BLOCK %d\n", block->meta_data.way);
+            // printf("BLOCK %d\n", block->meta_data.way);
         }
         reorder(block->meta_data.way, decode_address(address, cache).set, cache);
     }
@@ -205,7 +226,7 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
             // if find an empty position in the cache, directly insert the block
             read_block_from_memory(block, address, cache, i);
             if (cache == &ir_cache) {
-                printf("BLOCK %d\n", i);
+                // printf("BLOCK %d\n", i);
             }
             reorder(i, set, cache);
             return;
@@ -216,7 +237,7 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
     if (evicted_block->meta_data.dirty) cache2mem(encode_address(evicted_block->meta_data.set, evicted_block->meta_data.tag, cache), cache);
     read_block_from_memory(evicted_block, address, cache, evicted_block->meta_data.way);
     if (cache == &ir_cache) {
-        printf("BLOCK %d\n", evicted_block->meta_data.way);
+        // printf("BLOCK %d\n", evicted_block->meta_data.way);
     }
     reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache);
 }

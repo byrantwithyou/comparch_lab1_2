@@ -29,7 +29,7 @@
 // #define REPLACE_POLICY "LRU"
 
 /* For some, it includes both insert and replacment policy */
-#define POLICY "FIFO"
+#define POLICY "LFU"
 
 #ifndef POLICY
 #define POLICY ""
@@ -71,6 +71,7 @@ typedef struct {
     CACHE_BLOCK_T data[MAX_SET_COUNT][MAX_A];
     /* the order of the block in the set, the former, the ealier */
     int order[MAX_SET_COUNT][MAX_A];
+    int frequency[MAX_SET_COUNT][MAX_A];
 } CACHE_T;
 
 /* define the global cache(data cache and instruction cache) */
