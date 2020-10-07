@@ -72,7 +72,10 @@ int get_offset_in_block (uint32_t address, CACHE_T *cache) {
 * Purpose: regenerate the order list according to different policy 
 */
 void reorder(int most_recently_used, int set, CACHE_T *cache) {
-    if ((strcmp(INSERT_POLICY, "MRU") == 0) || (strcmp(POLICY, "FIFO") == 0)) {
+    ++cache->frequency[set][most_recently_used];
+    if ((strcmp(INSERT_POLICY, "MRU") == 0) \
+    || (strcmp(POLICY, "FIFO") == 0)) \
+    {
         int i = 0;
         int current_order = cache->meta_data.associativity - 1;
         // find the previous order of the block
@@ -89,10 +92,7 @@ void reorder(int most_recently_used, int set, CACHE_T *cache) {
         }
         // set the block to most-recently-used
         cache->order[set][0] = most_recently_used;
-    } else if (strcmp(POLICY, "LFU") == 0) {
-        printf("run here");
-        ++cache->frequency[set][most_recently_used];
-    }
+    } 
     if (cache == &ir_cache) {
         printf("touch BLOCK %d\n", most_recently_used);
         int i = 0;

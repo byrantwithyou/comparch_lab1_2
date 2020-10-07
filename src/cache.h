@@ -29,7 +29,7 @@
 // #define REPLACE_POLICY "LRU"
 
 /* For some, it includes both insert and replacment policy */
-#define POLICY "LFU"
+#define POLICY "FIFO"
 
 #ifndef POLICY
 #define POLICY ""
