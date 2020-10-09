@@ -1,3 +1,6 @@
+**add -lm to the gcc
+**that is how the makefile looks like:
+
 SRC = $(wildcard src/*.c)
 INPUT ?= $(wildcard inputs/*/*.x)
 
@@ -6,7 +9,7 @@ INPUT ?= $(wildcard inputs/*/*.x)
 all: sim
 
 sim: $(SRC)
-	gcc -g -O2 $^ -o $@
+	gcc -g -O2 $^ -o $@ -lm
 
 basesim: $(SRC)
 	gcc -g -O2 $^ -o $@
@@ -16,3 +19,4 @@ run: sim
 
 clean:
 	rm -rf *.o *~ sim
+    
