@@ -71,10 +71,11 @@ int get_offset_in_block (uint32_t address, CACHE_T *cache) {
 * Procudure: Reorder
 * Purpose: regenerate the order list according to different policy 
 */
-void reorder(int most_recently_used, int set, CACHE_T *cache) {
+void reorder(int most_recently_used, int set, CACHE_T *cache, int MRU) {
     ++cache->frequency[set][most_recently_used];
     if ((strcmp(INSERT_POLICY, "MRU") == 0) \
-    || (strcmp(POLICY, "FIFO") == 0)) \
+    || (strcmp(POLICY, "FIFO") == 0) \
+    || (MRU == TRUE))
     {
         int i = 0;
         int current_order = cache->meta_data.associativity - 1;
@@ -92,7 +93,19 @@ void reorder(int most_recently_used, int set, CACHE_T *cache) {
         }
         // set the block to most-recently-used
         cache->order[set][0] = most_recently_used;
-    } 
+    } else if (MRU == FALSE) {
+        int current_order = cache->meta_data.associativity - 1;
+        for (int i = 0; i < cache->meta_data.associativity; ++i) {
+            if (cache->order[set][i] == most_recently_used) {
+                current_order = i;
+                break;
+            }
+        }
+        for (int i = current_order + 1; i < cache->meta_data.associativity; ++i) {
+            cache->order[set][i - 1] = cache->order[set][i];
+        }
+        cache->order[set][cache->meta_data.associativity - 1] = most_recently_used;
+    }
     if (cache == &ir_cache) {
         printf("touch BLOCK %d\n", most_recently_used);
         int i = 0;
@@ -119,20 +132,22 @@ CACHE_BLOCK_T *find_evicted_block(int set, CACHE_T *cache) {
             lfu = i;
         }
     }
+    CACHE_BLOCK_T *evicted_block;
     if ((strcmp(REPLACE_POLICY, "LRU") == 0) || (strcmp(POLICY, "FIFO") == 0)) {
-        return &(cache->data[set][cache->order[set][cache->meta_data.associativity - 1]]);
+        evicted_block = &(cache->data[set][cache->order[set][cache->meta_data.associativity - 1]]);
     } else if (strcmp(REPLACE_POLICY, "RANDOM") == 0) {
-        return &(cache->data[set][rand() % (cache->meta_data.associativity)]);
+        evicted_block = &(cache->data[set][rand() % (cache->meta_data.associativity)]);
     } else if (strcmp(POLICY, "LFU") == 0) {
         cache->frequency[set][lfu] = 0;
-        for (int i = 0; i < ir_cache.meta_data.associativity; ++i) {
-            printf("%d ", ir_cache.frequency[set][i]);
-            if (i == ir_cache.meta_data.associativity - 1) {
-                printf("\n");
-            }
-        }
-        return &(cache->data[set][lfu]);
+        evicted_block = &(cache->data[set][lfu]);
     }
+    if (cache->eaf_length < cache->meta_data.cache_size / cache->meta_data.block_size) {
+        cache->eaf[cache->eaf_length++] = encode_address(evicted_block->meta_data.set, evicted_block->meta_data.tag, cache);
+    } else {
+        assert(cache->eaf_length >= cache->meta_data.cache_size / cache->meta_data.block_size);
+        cache->eaf_length = 0;
+    }
+    return evicted_block;
 }
 
 /*
@@ -190,7 +205,7 @@ uint32_t cache_read(uint32_t address, CACHE_T *cache) {
         if (cache == &ir_cache) {
             // printf("BLOCK %d\n", block->meta_data.way);
         }
-        reorder(block->meta_data.way, decode_address(address, cache).set, cache);
+        reorder(block->meta_data.way, decode_address(address, cache).set, cache, TRUE);
     }
     return block->data[get_offset_in_block(address, cache)];
 }
@@ -203,7 +218,7 @@ void cache_write(uint32_t address, uint32_t data) {
     CACHE_BLOCK_T *block = find_block_position(address, &d_cache);
     assert(block);
     if (strcmp(POLICY, "FIFO") != 0) {
-        reorder(block->meta_data.way, decode_address(address, &d_cache).set, &d_cache);
+        reorder(block->meta_data.way, decode_address(address, &d_cache).set, &d_cache, TRUE);
     }
     if (data == block->data[get_offset_in_block(address, &d_cache)]) return;
     block->data[get_offset_in_block(address, &d_cache)] = data;
@@ -228,7 +243,7 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
             if (cache == &ir_cache) {
                 // printf("BLOCK %d\n", i);
             }
-            reorder(i, set, cache);
+            reorder(i, set, cache, TRUE);
             return;
         }
     }
@@ -239,7 +254,17 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
     if (cache == &ir_cache) {
         // printf("BLOCK %d\n", evicted_block->meta_data.way);
     }
-    reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache);
+    if (strcmp(INSERT_POLICY, "EAF") == 0) {
+        for (int i = 0; i < cache->eaf_length; ++i) {
+            if (encode_address(set, tag, cache) == cache->eaf[i]){
+                reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache, TRUE);
+                return;     
+            }
+        }
+        // BIP insert
+        int MRU = rand() % 64 < 1? TRUE:FALSE;
+        reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache, FALSE);
+    } else reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache, TRUE);
 }
 
 /*

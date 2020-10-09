@@ -25,11 +25,11 @@
 #define MAX_A MAX(D_CACHE_A, IR_CACHE_A)
 
 /* The Policy for insert and replacement */
-// #define INSERT_POLICY "MRU"
-// #define REPLACE_POLICY "LRU"
+#define INSERT_POLICY "EAF"
+#define REPLACE_POLICY "LRU"
 
 /* For some, it includes both insert and replacment policy */
-#define POLICY "FIFO"
+// #define POLICY "FIFO"
 
 #ifndef POLICY
 #define POLICY ""
@@ -72,6 +72,8 @@ typedef struct {
     /* the order of the block in the set, the former, the ealier */
     int order[MAX_SET_COUNT][MAX_A];
     int frequency[MAX_SET_COUNT][MAX_A];
+    uint32_t eaf[MAX(D_CACHE_C / D_CACHE_B, IR_CACHE_C / IR_CACHE_B)];
+    int eaf_length;
 } CACHE_T;
 
 /* define the global cache(data cache and instruction cache) */
@@ -96,7 +98,7 @@ uint32_t traverse_block(uint32_t address, CACHE_T *cache, int word_offset);
 /* get the word offset inside a cache line */
 int get_offset_in_block(uint32_t address, CACHE_T *cache);
 /* re-generate the order list in the cache for different policies */ 
-void reorder(int most_recently_used, int set, CACHE_T *cache);
+void reorder(int most_recently_used, int set, CACHE_T *cache, int MRU);
 /* read the whole cache line from the memory */
 void read_block_from_memory(CACHE_BLOCK_T *block, uint32_t address, CACHE_T *cache, int way);
 /* find the evicted block according to different policies */
