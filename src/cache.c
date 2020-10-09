@@ -263,8 +263,14 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
         }
         // BIP insert
         int MRU = rand() % 64 < 1? TRUE:FALSE;
+        reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache, MRU);
+    } else if (strcmp(INSERT_POLICY, "BIP") == 0) {
+        int MRU = rand() % 64 < 1? TRUE:FALSE;
+        reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache, MRU);
+    } else if (strcmp(INSERT_POLICY, "LIP") == 0) {
         reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache, FALSE);
-    } else reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache, TRUE);
+    } 
+    else reorder(evicted_block->meta_data.way, evicted_block->meta_data.set, cache, TRUE);
 }
 
 /*

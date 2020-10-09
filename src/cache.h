@@ -25,7 +25,7 @@
 #define MAX_A MAX(D_CACHE_A, IR_CACHE_A)
 
 /* The Policy for insert and replacement */
-#define INSERT_POLICY "EAF"
+#define INSERT_POLICY "LIP"
 #define REPLACE_POLICY "LRU"
 
 /* For some, it includes both insert and replacment policy */
