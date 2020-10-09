@@ -106,17 +106,6 @@ void reorder(int most_recently_used, int set, CACHE_T *cache, int MRU) {
         }
         cache->order[set][cache->meta_data.associativity - 1] = most_recently_used;
     }
-    if (cache == &ir_cache) {
-        printf("touch BLOCK %d\n", most_recently_used);
-        int i = 0;
-        for (; i < cache->meta_data.associativity; ++i) {
-            printf("%d ", cache->frequency[set][i]);
-            if (i == cache->meta_data.associativity - 1){
-                printf("\n");
-            }
-        }
-
-    }
 }
 
 /*
@@ -202,9 +191,6 @@ uint32_t cache_read(uint32_t address, CACHE_T *cache) {
     CACHE_BLOCK_T *block = find_block_position(address, cache);
     assert(block);
     if (strcmp(POLICY, "FIFO") != 0) {
-        if (cache == &ir_cache) {
-            // printf("BLOCK %d\n", block->meta_data.way);
-        }
         reorder(block->meta_data.way, decode_address(address, cache).set, cache, TRUE);
     }
     return block->data[get_offset_in_block(address, cache)];
@@ -240,9 +226,6 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
         if (!block->meta_data.valid) {
             // if find an empty position in the cache, directly insert the block
             read_block_from_memory(block, address, cache, i);
-            if (cache == &ir_cache) {
-                // printf("BLOCK %d\n", i);
-            }
             reorder(i, set, cache, TRUE);
             return;
         }
@@ -251,9 +234,6 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
     CACHE_BLOCK_T *evicted_block = find_evicted_block(set, cache);
     if (evicted_block->meta_data.dirty) cache2mem(encode_address(evicted_block->meta_data.set, evicted_block->meta_data.tag, cache), cache);
     read_block_from_memory(evicted_block, address, cache, evicted_block->meta_data.way);
-    if (cache == &ir_cache) {
-        // printf("BLOCK %d\n", evicted_block->meta_data.way);
-    }
     if (strcmp(INSERT_POLICY, "EAF") == 0) {
         for (int i = 0; i < cache->eaf_length; ++i) {
             if (encode_address(set, tag, cache) == cache->eaf[i]){

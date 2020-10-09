@@ -12,9 +12,9 @@
 #define D_CACHE_C 0x10000      //cache size for data cache in byte
 #define D_CACHE_A 8            //associativity for data cache
 
-#define IR_CACHE_B 8          //block size for instruction cache in byte 
-#define IR_CACHE_C 0x10      //cache size for instruction cache in byte
-#define IR_CACHE_A 2           //associativity for instruction cache
+#define IR_CACHE_B 32          //block size for instruction cache in byte 
+#define IR_CACHE_C 0x2000      //cache size for instruction cache in byte
+#define IR_CACHE_A 4          //associativity for instruction cache
 
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 /* max block size in byte */
@@ -25,11 +25,10 @@
 #define MAX_A MAX(D_CACHE_A, IR_CACHE_A)
 
 /* The Policy for insert and replacement */
-#define INSERT_POLICY "LIP"
+#define INSERT_POLICY "MRU"
 #define REPLACE_POLICY "LRU"
 
 /* For some, it includes both insert and replacment policy */
-// #define POLICY "FIFO"
 
 #ifndef POLICY
 #define POLICY ""
