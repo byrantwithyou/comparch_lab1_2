@@ -8,6 +8,9 @@
     #include "cache.h"
     #include "stdint.h"
     #include "stdlib.h"
+    /* ===============================Helper Function============================= */
+    int find_current_order(int way, int set, CACHE_T *cache);
+    /* =========================================================================== */
     /* ===============================Insert Policy=============================== */
     /* first in, first out */
     void commit_fifo(int way, int set, CACHE_T *cache, int first_commit);

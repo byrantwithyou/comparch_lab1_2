@@ -76,10 +76,19 @@ void commit(int way, int set, CACHE_T *cache, int first_commit) {
 * Purpose: find the evicted block according to the replacement policy 
 */
 CACHE_BLOCK_T *find_evicted_block(int set, CACHE_T *cache) {
-    if (strcmp(REPLACE_POLICY, "LRU") == 0) return feb_lru(set, cache);
-    if (strcmp(REPLACE_POLICY, "RANDOM") == 0) return feb_random(set, cache);
-    if (strcmp(POLICY, "FIFO") == 0) return feb_fifo(set, cache);
-    if (strcmp(POLICY, "LFU") == 0) return feb_lfu(set, cache);
+    CACHE_BLOCK_T *evicted_block = NULL;
+    if (strcmp(REPLACE_POLICY, "LRU") == 0) evicted_block = feb_lru(set, cache);
+    else if (strcmp(REPLACE_POLICY, "RANDOM") == 0) evicted_block = feb_random(set, cache);
+    else if (strcmp(POLICY, "FIFO") == 0) evicted_block = feb_fifo(set, cache);
+    else if (strcmp(POLICY, "LFU") == 0) evicted_block = feb_lfu(set, cache);
+    assert(evicted_block);
+    if (cache->eaf_length < cache->meta_data.cache_size / cache->meta_data.block_size) {
+        cache->eaf[cache->eaf_length++] = evicted_block->meta_data.address;
+    } else {
+        assert(cache->eaf_length >= cache->meta_data.cache_size / cache->meta_data.block_size);
+        cache->eaf_length = 0; 
+    }
+    return evicted_block;
 }
 
 /*
