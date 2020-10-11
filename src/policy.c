@@ -1,22 +1,5 @@
 #include "policy.h"
 
-// /* =================================insert======================= */
-// 
-//     } else if (MRU == FALSE) {
-//         int current_order = cache->meta_data.associativity - 1;
-//         for (int i = 0; i < cache->meta_data.associativity; ++i) {
-//             if (cache->order[set][i] == most_recently_used) {
-//                 current_order = i;
-//                 break;
-//             }
-//         }
-//         for (int i = current_order + 1; i < cache->meta_data.associativity; ++i) {
-//             cache->order[set][i - 1] = cache->order[set][i];
-//         }
-//         cache->order[set][cache->meta_data.associativity - 1] = most_recently_used;
-//     }
-// /* ============================================================== */
-
 /* ===============================Helper Function============================ */
 int find_current_order(int way, int set, CACHE_T *cache) {
     for (int i = 0; i < cache->meta_data.associativity; ++i) {
