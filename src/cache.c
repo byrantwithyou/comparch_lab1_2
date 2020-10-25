@@ -18,6 +18,7 @@
 //NOTE:assume that the max cache_size is 1GB(according to INT_MAX in <limits.h>), which is reasonable
 
 CACHE_T d_cache, ir_cache;
+L2_CACHE_T l2_cache;
 
 //=================Helper Function===============
 double log2(double x) {
@@ -116,8 +117,15 @@ void cache_init() {
     //=====================================================================
     assert((D_CACHE_C / (D_CACHE_B * D_CACHE_A) >= 1) && (IR_CACHE_C / (IR_CACHE_A * IR_CACHE_B) >= 1));
     //====================Set the valid bit================================
+    l2_cache.cache.meta_data = (CACHE_META_T){
+        .associativity = 16,
+        .block_size = 32,
+        .cache_size = 0x20000
+    };
     memset(d_cache.data, 0, sizeof d_cache.data);
     memset(ir_cache.data, 0, sizeof ir_cache.data);
+    memset(l2_cache.cache.data, 0, sizeof l2_cache.cache.data);
+    memset(l2_cache.mshr, 0, sizeof l2_cache.mshr);
     //=====================================================================
     for (int i = 0; i < MAX_SET_COUNT; ++i) {
         for (int j = 0; j < MAX_A; ++j) {
@@ -207,4 +215,12 @@ CACHE_BLOCK_T *find_block_position(uint32_t address, CACHE_T *cache) {
         }
     }
     return NULL;
+}
+
+/*
+*
+* Procedure:Find_Block_Position_L2
+*/
+CACHE_BLOCK_T *find_block_position_l2(uint32_t address, L2_CACHE_T *cache) {
+    return find_block_position(address, &(cache->cache));
 }

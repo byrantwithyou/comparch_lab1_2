@@ -46,10 +46,22 @@
         int set;
     } DECODE_ADDRESS_RESULT_T;
 
+    typedef struct MSHR_T {
+        int valid;
+        int done;
+        uint32_t address;
+    } MSHR_T;
+
+    typedef struct L2_CACHE_T {
+        CACHE_T cache;
+        MSHR_T mshr[16];
+    } L2_CACHE_T;
+
     /* ========================================================================== */
 
     /* define the global cache(data cache and instruction cache) */
     extern CACHE_T d_cache, ir_cache;
+    extern L2_CACHE_T l2_cache;
 
     void cache_init();
     uint32_t cache_read(uint32_t address, CACHE_T *cache);  //read from cache
@@ -58,6 +70,8 @@
     void cache2mem(uint32_t address, CACHE_T *cache);       //write back a dirty block to memory
     /* find the block address in the cache according to its address */
     CACHE_BLOCK_T *find_block_position(uint32_t address, CACHE_T *cache);
+    /* find the block address in l2 cache */
+    CACHE_BLOCK_T *find_block_position_l2(uint32_t address, L2_CACHE_T *cache);
     // when touching a block, commit it, change the data structure accordingly
     // first_commit: whether this is a first-time commit
     void commit(int way, int set, CACHE_T *cache, int first_commit);
