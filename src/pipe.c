@@ -144,14 +144,16 @@ void pipe_stage_mem()
 {
     /* if there is no instruction in this pipeline stage, we are done */
     if (pipe.mem_stall > 0) --pipe.mem_stall;
+    // if it is stuck in the memory, add stall
+    if (pipe.mem_op && probe_mshr(pipe.mem_op->mem_addr & ~3)) ++pipe.mem_stall; 
     if (!pipe.mem_op)
         return;
     if (pipe.mem_stall > 0) return;
     /* grab the op out of our input slot */
     Pipe_Op *op = pipe.mem_op;
+    uint32_t address = op->mem_addr & ~3;
 
     uint32_t val = 0;
-    uint32_t address = op->mem_addr & ~3; 
     if (op->is_mem && op->opcode != OP_SW) {
         if (!find_block_position(address, &d_cache)) {
             transfer_mem_hier(address, &d_cache, TRUE);
@@ -695,6 +697,8 @@ void pipe_stage_fetch()
 {
     /* if pipeline is stalled (our output slot is not empty), return */
     if (pipe.instruction_stall > 0) --pipe.instruction_stall;
+    // if it is stuck in the memory, add instruction stall
+    if (probe_mshr(pipe.PC)) ++pipe.instruction_stall;
     if (pipe.decode_op != NULL) return;
     // add tricks to adjust to the basesim
     if (0 == RUN_BIT) {
@@ -747,8 +751,21 @@ void transfer_mem_hier(uint32_t address, CACHE_T *cache, int data_transfer) {
         (*stall) = 10 + 1;
         mem2cache(address, cache);
         mem2cache(address, &(l2_cache.cache));
+        assert (address % 4 == 0);
         //initiate mshr
-        //if mshr is not done, ++stall
     }
     return;
+}
+
+/*
+*
+* Procedure: Probe_MSHR
+* Purpose: find whether an address is being served by the main memory
+*/
+int probe_mshr(uint32_t address) {
+    assert(address % 4 == 0);
+    for (int i = 0; i < 16; ++i) {
+        if (l2_cache.mshr[i].valid && (l2_cache.mshr[i].address == address)) return TRUE;
+    }
+    return FALSE;
 }

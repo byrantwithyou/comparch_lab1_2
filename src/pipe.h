@@ -111,6 +111,8 @@ void pipe_recover(int flush, uint32_t dest);
 /* transfer data from the memory hierarchy */
 // data transfer: whether this is a data transfer or instruction transfer
 void transfer_mem_hier(uint32_t address, CACHE_T *cache, int data_transfer);
+// probe whether an address is in the mshr valid
+int probe_mshr(uint32_t address);
 
 /* each of these functions implements one stage of the pipeline */
 void pipe_stage_fetch();
