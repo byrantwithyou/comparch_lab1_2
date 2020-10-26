@@ -730,6 +730,10 @@ void transfer_mem_hier(uint32_t address, CACHE_T *cache, int data_transfer) {
     assert((cache == &ir_cache) || (cache == &d_cache));
     if (find_block_position(address, &(l2_cache.cache))) {
         mem2cache(address, cache);
+        //commit to the l2 cache
+        CACHE_BLOCK_T *block_l2 = find_block_position(address, &(l2_cache.cache));
+        int set = decode_address(address, &(l2_cache.cache)).set;
+        commit(block_l2->meta_data.way, set, &(l2_cache.cache), FALSE);
         // if found in l2 cache, stall the pipeline for 15 + 1 cycles
         if (data_transfer) pipe.mem_stall = 15 + 1;
         else pipe.instruction_stall = 15 + 1;
