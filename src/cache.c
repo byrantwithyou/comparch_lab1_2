@@ -198,8 +198,9 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
     // otherwise, find an evicted_block
     CACHE_BLOCK_T *evicted_block = find_evicted_block(set, cache);
     if (evicted_block->meta_data.dirty) {
+        assert(cache == &d_cache);
         cache2mem(evicted_block->meta_data.address, cache);
-        if ((cache == &d_cache) && (find_block_position(evicted_block->meta_data.address, &(l2_cache.cache)))) {
+        if (find_block_position(evicted_block->meta_data.address, &(l2_cache.cache))) {
             cache2cache(evicted_block->meta_data.address, &(l2_cache.cache), &d_cache);
         }
     }
