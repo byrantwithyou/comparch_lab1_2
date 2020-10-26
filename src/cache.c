@@ -100,7 +100,12 @@ CACHE_BLOCK_T *find_evicted_block(int set, CACHE_T *cache) {
 void read_block_from_memory(CACHE_BLOCK_T *block, uint32_t address, CACHE_T *cache, int way) {
     for (int i = 0; i < cache->meta_data.block_size / 4; ++i) {
         block->data[i] = mem_read_32(traverse_block(address, cache, i));}
-    block->meta_data = (CACHE_BLOCK_META_T){.valid = TRUE, .dirty = FALSE, .way = way, .address = address};
+    block->meta_data = (CACHE_BLOCK_META_T) {
+        .valid = TRUE, 
+        .dirty = FALSE, 
+        .way = way, 
+        .address = traverse_block(address, cache, 0)
+    };
 }
 //===============================================
 
@@ -121,7 +126,7 @@ void cache_init() {
     l2_cache.cache.meta_data = (CACHE_META_T){
         .associativity = 16,
         .block_size = 32,
-        .cache_size = 0x20000
+        .cache_size = 0x40000
     };
     memset(d_cache.data, 0, sizeof d_cache.data);
     memset(ir_cache.data, 0, sizeof ir_cache.data);
@@ -235,6 +240,7 @@ CACHE_BLOCK_T *find_block_position(uint32_t address, CACHE_T *cache) {
         CACHE_BLOCK_T *current_block = &(cache->data[set][i]);
         uint32_t current_tag = decode_address(current_block->meta_data.address, cache).tag;
         if (current_block->meta_data.valid && (current_tag == tag)) {
+            assert(current_block->meta_data.address == traverse_block(address, cache, 0));
             return current_block;
         }
     }

@@ -12,6 +12,7 @@
 #include "shell.h"
 #include "mips.h"
 #include "cache.h"
+#include "mem_ctrl.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -56,6 +57,7 @@ void pipe_cycle()
     pipe_stage_execute();
     pipe_stage_decode();
     pipe_stage_fetch();
+    mem_cycle();
 
     /* handle branch recoveries */
     if (pipe.branch_recover) {
@@ -740,8 +742,13 @@ void transfer_mem_hier(uint32_t address, CACHE_T *cache, int data_transfer) {
         (*stall) = 15 + 1;
     } else {
         // memory request
+        // note that we model the latency between L2 cache and memory controller as a whole,
+        // this, however, should not have any side effects on this simulator
+        (*stall) = 10 + 1;
         mem2cache(address, cache);
-        (*stall) = 50;
+        mem2cache(address, &(l2_cache.cache));
+        //initiate mshr
+        //if mshr is not done, ++stall
     }
     return;
 }

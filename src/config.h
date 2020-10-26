@@ -79,14 +79,12 @@
     #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
     
     // max block size in byte
-    #define MAX_BLOCK_SIZE MAX(D_CACHE_B, IR_CACHE_B) 
+    #define MAX_BLOCK_SIZE MAX(32, MAX(D_CACHE_B, IR_CACHE_B)) 
     
     // max set count
-    #define MAX_SET_COUNT MAX(D_CACHE_C / (D_CACHE_B * D_CACHE_A), IR_CACHE_C / (IR_CACHE_B * IR_CACHE_A))
-    
+    #define MAX_SET_COUNT MAX(512, MAX(D_CACHE_C / (D_CACHE_B * D_CACHE_A), IR_CACHE_C / (IR_CACHE_B * IR_CACHE_A)))
     // max associativity
-    #define MAX_A MAX(D_CACHE_A, IR_CACHE_A)
-
+    #define MAX_A MAX(16, MAX(D_CACHE_A, IR_CACHE_A))
     /* =================================================================== */
 
 #endif
