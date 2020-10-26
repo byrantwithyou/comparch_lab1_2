@@ -153,7 +153,7 @@ void pipe_stage_mem()
     if (op->is_mem && op->opcode != OP_SW) {
         if (!find_block_position(address, &d_cache)) {
             // if found in l2 cache, stall for 15 + 1 cycles
-            if (find_block_position_l2(address, &l2_cache)) {
+            if (find_block_position(address, &(l2_cache.cache))) {
                 mem2cache(address, &d_cache);
                 pipe.mem_stall = 15 + 1;
                 return;
@@ -222,7 +222,7 @@ void pipe_stage_mem()
             }
             if (!find_block_position(address, &d_cache)) {
                 // if found in l2 cache, stall for 15 + 1 cycles
-                if (find_block_position_l2(address, &l2_cache)) {
+                if (find_block_position(address, &(l2_cache.cache))) {
                     mem2cache(address, &d_cache);
                     pipe.mem_stall = 15 + 1;
                     return;
@@ -250,7 +250,7 @@ void pipe_stage_mem()
 
             if (!find_block_position(address, &d_cache)) {
                 // if found in l2 cache, stall for 15 + 1 cycles
-                if (find_block_position_l2(address, &l2_cache)) {
+                if (find_block_position(address, &(l2_cache.cache))) {
                     mem2cache(address, &d_cache);
                     pipe.mem_stall = 15 + 1;
                     return;
@@ -268,7 +268,7 @@ void pipe_stage_mem()
             val = op->mem_value;
             if (!find_block_position(address, &d_cache)) {
                 // if found in l2 cache, stall for 15 + 1 cycles
-                if (find_block_position_l2(address, &l2_cache)) {
+                if (find_block_position(address, &(l2_cache.cache))) {
                     mem2cache(address, &d_cache);
                     pipe.mem_stall = 15 + 1;
                     return;
@@ -735,7 +735,7 @@ void pipe_stage_fetch()
     if (pipe.instruction_stall > 0) return;
     if (!find_block_position(pipe.PC, &ir_cache)) {
         // if the block is found in l2 cache 
-        if (find_block_position_l2(pipe.PC, &l2_cache)) {
+        if (find_block_position(pipe.PC, &(l2_cache.cache))) {
             mem2cache(pipe.PC, &ir_cache);
             pipe.instruction_stall = 15 + 1;
             return;

@@ -70,8 +70,6 @@
     void cache2mem(uint32_t address, CACHE_T *cache);       //write back a dirty block to memory
     /* find the block address in the cache according to its address */
     CACHE_BLOCK_T *find_block_position(uint32_t address, CACHE_T *cache);
-    /* find the block address in l2 cache */
-    CACHE_BLOCK_T *find_block_position_l2(uint32_t address, L2_CACHE_T *cache);
     // when touching a block, commit it, change the data structure accordingly
     // first_commit: whether this is a first-time commit
     void commit(int way, int set, CACHE_T *cache, int first_commit);

@@ -216,11 +216,3 @@ CACHE_BLOCK_T *find_block_position(uint32_t address, CACHE_T *cache) {
     }
     return NULL;
 }
-
-/*
-*
-* Procedure:Find_Block_Position_L2
-*/
-CACHE_BLOCK_T *find_block_position_l2(uint32_t address, L2_CACHE_T *cache) {
-    return find_block_position(address, &(cache->cache));
-}
