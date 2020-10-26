@@ -64,10 +64,11 @@ int get_offset_in_block (uint32_t address, CACHE_T *cache) {
 */
 void commit(int way, int set, CACHE_T *cache, int first_commit) {
     ++cache->frequency[set][way];
-    if (strcmp(INSERT_POLICY, "EAF") == 0) commit_eaf(way, set, cache, first_commit);
+    if (cache == &(l2_cache.cache) || (strcmp(INSERT_POLICY, "MRU") == 0)) {
+        commit_mru(way, set, cache, first_commit);
+    } else if (strcmp(INSERT_POLICY, "EAF") == 0) commit_eaf(way, set, cache, first_commit);
     else if (strcmp(INSERT_POLICY, "BIP") == 0) commit_bip(way, set, cache, first_commit);
     else if (strcmp(INSERT_POLICY, "LIP") == 0) commit_lip(way, set, cache, first_commit);
-    else if (strcmp(INSERT_POLICY, "MRU") == 0) commit_mru(way, set, cache, first_commit);
     else if (strcmp(POLICY, "FIFO") == 0) commit_fifo(way, set, cache, first_commit);
     else if (strcmp(POLICY, "LFU") == 0) commit_lfu(way, set, cache, first_commit);
 }
@@ -78,7 +79,7 @@ void commit(int way, int set, CACHE_T *cache, int first_commit) {
 */
 CACHE_BLOCK_T *find_evicted_block(int set, CACHE_T *cache) {
     CACHE_BLOCK_T *evicted_block = NULL;
-    if (strcmp(REPLACE_POLICY, "LRU") == 0) evicted_block = feb_lru(set, cache);
+    if ((strcmp(REPLACE_POLICY, "LRU") == 0) || (cache == &(l2_cache.cache))) evicted_block = feb_lru(set, cache);
     else if (strcmp(REPLACE_POLICY, "RANDOM") == 0) evicted_block = feb_random(set, cache);
     else if (strcmp(POLICY, "FIFO") == 0) evicted_block = feb_fifo(set, cache);
     else if (strcmp(POLICY, "LFU") == 0) evicted_block = feb_lfu(set, cache);
@@ -161,6 +162,23 @@ void cache_write(uint32_t address, uint32_t data) {
 }
 
 /*
+*
+* Procedure: Cache_2_Cache
+* Purpose: Transfer the data block from cache to cache
+*/
+void cache2cache(uint32_t address, CACHE_T *cache_dest, CACHE_T *cache_src) {
+    assert(cache_dest->meta_data.block_size == cache_src->meta_data.block_size);
+    CACHE_BLOCK_T *block_dest = find_block_position(address, cache_dest);
+    CACHE_BLOCK_T *block_src = find_block_position(address, cache_src);
+    assert(block_dest && block_src && (block_dest->meta_data.address == block_src->meta_data.address));
+    block_dest->meta_data.dirty = FALSE;
+    block_dest->meta_data.valid = TRUE;
+    for (int i = 0; i < MAX_BLOCK_SIZE / 4; ++i) {
+        block_dest->data[i] = block_src->data[i];
+    }
+}
+
+/*
 * 
 * Procedure: Mem_2_Cache
 * Purpose: Transfer the data block to cache if cache misses
@@ -179,7 +197,12 @@ void mem2cache(uint32_t address, CACHE_T *cache) {
     }
     // otherwise, find an evicted_block
     CACHE_BLOCK_T *evicted_block = find_evicted_block(set, cache);
-    if (evicted_block->meta_data.dirty) cache2mem(evicted_block->meta_data.address, cache);
+    if (evicted_block->meta_data.dirty) {
+        cache2mem(evicted_block->meta_data.address, cache);
+        if ((cache == &d_cache) && (find_block_position(evicted_block->meta_data.address, &(l2_cache.cache)))) {
+            cache2cache(evicted_block->meta_data.address, &(l2_cache.cache), &d_cache);
+        }
+    }
     read_block_from_memory(evicted_block, address, cache, evicted_block->meta_data.way);
     commit(evicted_block->meta_data.way, set, cache, TRUE);
 }

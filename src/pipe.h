@@ -10,6 +10,7 @@
 #define _PIPE_H_
 
 #include "shell.h"
+#include "cache.h"
 
 /* Pipeline ops (instances of this structure) are high-level representations of
  * the instructions that actually flow through the pipeline. This struct does
@@ -106,6 +107,10 @@ void pipe_cycle();
 /* flushes 'flush' stages (1 = execute only, 2 = fetch/decode, ...) and then
  * sets the fetch PC to the given destination. */
 void pipe_recover(int flush, uint32_t dest);
+
+/* transfer data from the memory hierarchy */
+// data transfer: whether this is a data transfer or instruction transfer
+void transfer_mem_hier(uint32_t address, CACHE_T *cache, int data_transfer);
 
 /* each of these functions implements one stage of the pipeline */
 void pipe_stage_fetch();

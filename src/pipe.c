@@ -152,15 +152,7 @@ void pipe_stage_mem()
     uint32_t address = op->mem_addr & ~3; 
     if (op->is_mem && op->opcode != OP_SW) {
         if (!find_block_position(address, &d_cache)) {
-            // if found in l2 cache, stall for 15 + 1 cycles
-            if (find_block_position(address, &(l2_cache.cache))) {
-                mem2cache(address, &d_cache);
-                pipe.mem_stall = 15 + 1;
-                return;
-            }
-            // if there's a miss in data cache, stall the mem stage
-            mem2cache(address, &d_cache);
-            pipe.mem_stall = 50;
+            transfer_mem_hier(address, &d_cache, TRUE);
             return;
         }
         val = cache_read(address, &d_cache);
@@ -221,15 +213,7 @@ void pipe_stage_mem()
                 case 3: val = (val & 0x00FFFFFF) | ((op->mem_value & 0xFF) << 24); break;
             }
             if (!find_block_position(address, &d_cache)) {
-                // if found in l2 cache, stall for 15 + 1 cycles
-                if (find_block_position(address, &(l2_cache.cache))) {
-                    mem2cache(address, &d_cache);
-                    pipe.mem_stall = 15 + 1;
-                    return;
-                }
-                mem2cache(address, &d_cache);
-                // if there's a miss in data cache, stall the mem stage
-                pipe.mem_stall = 50;
+                transfer_mem_hier(address, &d_cache, TRUE);
                 return;
             }
             // directly write to cache
@@ -249,15 +233,7 @@ void pipe_stage_mem()
 #endif
 
             if (!find_block_position(address, &d_cache)) {
-                // if found in l2 cache, stall for 15 + 1 cycles
-                if (find_block_position(address, &(l2_cache.cache))) {
-                    mem2cache(address, &d_cache);
-                    pipe.mem_stall = 15 + 1;
-                    return;
-                }
-                // if there's a miss in data cache, stall the mem stage
-                mem2cache(address, &d_cache);
-                pipe.mem_stall = 50;
+                transfer_mem_hier(address, &d_cache, TRUE);
                 return;
             }
             // directly write to cache
@@ -267,15 +243,7 @@ void pipe_stage_mem()
         case OP_SW:
             val = op->mem_value;
             if (!find_block_position(address, &d_cache)) {
-                // if found in l2 cache, stall for 15 + 1 cycles
-                if (find_block_position(address, &(l2_cache.cache))) {
-                    mem2cache(address, &d_cache);
-                    pipe.mem_stall = 15 + 1;
-                    return;
-                }
-                // if there's a miss in data cache, stall the mem stage
-                mem2cache(address, &d_cache);
-                pipe.mem_stall = 50;
+                transfer_mem_hier(address, &d_cache, TRUE);
                 return;
             }
             // directly write to cache
@@ -734,15 +702,7 @@ void pipe_stage_fetch()
     } 
     if (pipe.instruction_stall > 0) return;
     if (!find_block_position(pipe.PC, &ir_cache)) {
-        // if the block is found in l2 cache 
-        if (find_block_position(pipe.PC, &(l2_cache.cache))) {
-            mem2cache(pipe.PC, &ir_cache);
-            pipe.instruction_stall = 15 + 1;
-            return;
-        }
-        // if there is a cache miss, stall the fetch stage, bring the memory block to the cache
-        mem2cache(pipe.PC, &ir_cache);
-        pipe.instruction_stall = 50;
+        transfer_mem_hier(pipe.PC, &ir_cache, FALSE);
         return;
     }
     /* Allocate an op and send it down the pipeline. */
@@ -759,4 +719,25 @@ void pipe_stage_fetch()
     pipe.PC += 4;
 
     stat_inst_fetch++;
+}
+
+/*
+*
+* Procedure: transfer_mem_hier
+* Purpose: Transfer the data from the memory hierarchy
+*/
+void transfer_mem_hier(uint32_t address, CACHE_T *cache, int data_transfer) {
+    assert((cache == &ir_cache) || (cache == &d_cache));
+    if (find_block_position(address, &(l2_cache.cache))) {
+        mem2cache(address, cache);
+        // if found in l2 cache, stall the pipeline for 15 + 1 cycles
+        if (data_transfer) pipe.mem_stall = 15 + 1;
+        else pipe.instruction_stall = 15 + 1;
+    } else {
+        // memory request
+        mem2cache(address, cache);
+        if (data_transfer) pipe.mem_stall = 50;
+        else pipe.instruction_stall = 50;
+    }
+    return;
 }
