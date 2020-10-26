@@ -52,12 +52,12 @@ void pipe_cycle()
     printf("\n");
 #endif
 
+    mem_cycle();
     pipe_stage_wb();
     pipe_stage_mem();
     pipe_stage_execute();
     pipe_stage_decode();
     pipe_stage_fetch();
-    mem_cycle();
 
     /* handle branch recoveries */
     if (pipe.branch_recover) {
@@ -752,9 +752,18 @@ void transfer_mem_hier(uint32_t address, CACHE_T *cache, int data_transfer) {
         mem2cache(address, cache);
         mem2cache(address, &(l2_cache.cache));
         assert (address % 4 == 0);
+        for (int i = 0; i < 16; ++i) {
+            if (!l2_cache.mshr[i].valid) {
+                l2_cache.mshr[i] = (MSHR_T) {
+                    .valid = TRUE,
+                    .done = FALSE,
+                    .address = address
+                };
+                return;
+            }
+        }
         //initiate mshr
     }
-    return;
 }
 
 /*
