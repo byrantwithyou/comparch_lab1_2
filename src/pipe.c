@@ -12,7 +12,6 @@
 #include "shell.h"
 #include "mips.h"
 #include "cache.h"
-#include "mem_ctrl.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -752,28 +751,6 @@ void transfer_mem_hier(uint32_t address, CACHE_T *cache, int data_transfer) {
         mem2cache(address, cache);
         mem2cache(address, &(l2_cache.cache));
         assert (address % 4 == 0);
-        for (int i = 0; i < 16; ++i) {
-            if (!l2_cache.mshr[i].valid) {
-                l2_cache.mshr[i] = (MSHR_T) {
-                    .valid = TRUE,
-                    .done = FALSE,
-                    .address = address
-                };
-                return;
-            }
-        }
+        in_mshr(address);
     }
-}
-
-/*
-*
-* Procedure: Probe_MSHR
-* Purpose: find whether an address is being served by the main memory
-*/
-int probe_mshr(uint32_t address) {
-    assert(address % 4 == 0);
-    for (int i = 0; i < 16; ++i) {
-        if (l2_cache.mshr[i].valid && (l2_cache.mshr[i].address == address)) return TRUE;
-    }
-    return FALSE;
 }

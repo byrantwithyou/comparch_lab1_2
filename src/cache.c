@@ -131,7 +131,7 @@ void cache_init() {
     memset(d_cache.data, 0, sizeof d_cache.data);
     memset(ir_cache.data, 0, sizeof ir_cache.data);
     memset(l2_cache.cache.data, 0, sizeof l2_cache.cache.data);
-    memset(l2_cache.mshr, 0, sizeof l2_cache.mshr);
+    init_mshr();
     //=====================================================================
     for (int i = 0; i < MAX_SET_COUNT; ++i) {
         for (int j = 0; j < MAX_A; ++j) {

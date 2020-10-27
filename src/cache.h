@@ -4,9 +4,11 @@
 
 #ifndef _CACHE_H_
     #define _CACHE_H_
+    
+    #include <stdlib.h>
+    #include <stdint.h>
     #include "config.h"
-    #include "stdlib.h"
-    #include "stdint.h"
+    #include "mem_ctrl.h"
     /* ========================DATA STRUCTURE===================================== */
     
     /* data structure of the meta data of a cache block(line) */
@@ -46,15 +48,9 @@
         int set;
     } DECODE_ADDRESS_RESULT_T;
 
-    typedef struct MSHR_T {
-        int valid;
-        int done;
-        uint32_t address;
-    } MSHR_T;
-
     typedef struct L2_CACHE_T {
         CACHE_T cache;
-        MSHR_T mshr[16];
+        MSHR_QUEUE mshr;
     } L2_CACHE_T;
 
     /* ========================================================================== */
