@@ -5,13 +5,13 @@
 #include "shell.h"
 #include "mem_ctrl.h"
 #include <string.h>
+#include <stdlib.h>
 #include <assert.h>
 
 
-//TODO:set bus status
-//TODO:prune working set status
-//TODO:schedulable function
-//TODO:clean memory space
+//TODO:set_bus_busy_status
+//TODO:set_busy_status_HIT, set_busy_status_MISS, set_busy_status_CONFLICT
+//TODO:schedulable function, set_bank_busy_status, optimize 
 //TODO:test
 
 // store which row the 8 bank's row buffer stores, -1 stands for nothing
@@ -21,6 +21,46 @@ int row_buffer[8];
 RANGE_T *command_bus_busy_set, *data_bus_busy_set, *bank_busy_set[8];
 
 /* ====================Helper Function=============== */
+
+int intersect(int min_cycle_foo, int min_cycle_bar, int range_length) {
+    return abs(min_cycle_foo - min_cycle_bar) <= range_length;
+}
+
+void clean_up_helper(RANGE_T **range_list) {
+    if ((*range_list) && ((*range_list)->max_cycle < stat_cycles)) {
+        assert((*range_list)->max_cycle == stat_cycles - 1);
+        RANGE_T *unused_range = *range_list;
+        *range_list = (*range_list)->next;
+        free(unused_range);
+    }
+}
+
+void destory(RANGE_T **range_list) {
+    while (*range_list) {
+        RANGE_T *unused_range = *range_list;
+        *range_list = (*range_list)->next;
+        free(unused_range);
+    }
+}
+
+/*
+* Procedure: clean_up
+* Purpose: clean up unused range
+*/
+void clean_up() {
+    for (int i = 0; i < 8; ++i) {
+        clean_up_helper(&(bank_busy_set[i]));
+    }
+    clean_up_helper(&command_bus_busy_set);
+    clean_up_helper(&data_bus_busy_set);
+    if (RUN_BIT) {
+        destory(&command_bus_busy_set);
+        destory(&data_bus_busy_set);
+        for (int i = 0; i < 8; ++i) {
+            destory(&(bank_busy_set[i]));
+        }
+    }
+}
 
 /* 
 * 
@@ -49,6 +89,7 @@ int get_bank(uint32_t address) {
 */
 void mem_cycle() {
     finish_request();
+    clean_up();
     MSHR_T *request = find_request_to_serve();
     serve_request(request);
 }
@@ -144,7 +185,7 @@ void finish_request() {
 
 /*
 * Procedure: traverse_msher
-* Purpose: traverse the mshr to find the scheduable and preferred memory request to be served
+* Purpose: traverse the mshr to find the schedulable and preferred memory request to be served
 */
 MSHR_T *traverse_mshr(int row_hit) {
     for (int i = 0; i < l2_cache.mshr.length; ++i) {
@@ -236,7 +277,43 @@ int probe_mshr(uint32_t address) {
 * Procedure: schedulable
 * Purpose: Whether a memory request is schedulable
 */
-// to see if 
 int schedulable(MSHR_T *request) {
-    return TRUE;
+    uint32_t address = request->address;
+    int bank = get_bank(address);
+    if (row_buffer[bank] != get_row(address)) {
+        RANGE_T *iter = command_bus_busy_set;
+        while (iter) {
+            if (intersect(stat_cycles, iter->min_cycle, 4) || intersect(stat_cycles + 100, iter->min_cycle, 4) || intersect(stat_cycles + 200, iter->min_cycle, 4)) return FALSE;
+            iter = iter->next;
+        }
+        iter = data_bus_busy_set;
+        while (iter) {
+            if (intersect(stat_cycles + 300, iter->min_cycle, 50)) return FALSE;
+            iter = iter->next;
+        }
+    }     
+    else if (row_buffer[bank] == -1) {
+        RANGE_T *iter = command_bus_busy_set;
+        while (iter) {
+            if (intersect(stat_cycles, iter->min_cycle, 4) || intersect(stat_cycles + 100, iter->min_cycle, 4)) return FALSE;
+            iter = iter->next;
+        }
+        iter = data_bus_busy_set;
+        while (iter) {
+            if (intersect(stat_cycles + 200, iter->min_cycle, 50)) return FALSE;
+            iter = iter->next;
+        }
+    } else {
+        RANGE_T *iter = command_bus_busy_set;
+        while (iter) {
+            if (intersect(stat_cycles, iter->min_cycle, 4)) return FALSE;
+            iter = iter->next;
+        }
+        iter = data_bus_busy_set;
+        while (iter) {
+            if (intersect(stat_cycles + 100, iter->min_cycle, 50)) return FALSE;
+            iter = iter->next;
+        }
+    }
+    return !bank_busy_set[bank];
 }

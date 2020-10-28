@@ -59,6 +59,8 @@
     /* ===============Helper Function=========================== */
     int get_row(uint32_t address);
     int get_bank(uint32_t address);
+    // clean up unused range
+    void clean_up();
     /* ========================================================= */
 
 #endif
