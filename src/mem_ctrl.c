@@ -9,10 +9,9 @@
 #include <assert.h>
 
 
-//TODO:set_bus_busy_status
 //TODO:set_busy_status_HIT, set_busy_status_MISS, set_busy_status_CONFLICT
-//TODO:schedulable function, set_bank_busy_status, optimize 
-//TODO:test
+//TODO:schedulable function, optimize 
+//TODO:test and optimize
 
 // store which row the 8 bank's row buffer stores, -1 stands for nothing
 int row_buffer[8];
@@ -100,55 +99,79 @@ void mem_cycle() {
 * Procedure: set_bus_busy_status
 * Purpose: set bus basy status
 */
-void set_bus_busy_status(enum ROW_BUFFER_STATUS status, RANGE_T **bus) {
-    //merge forward and backward
-}
+// void set_bus_busy_status(enum ROW_BUFFER_STATUS status, RANGE_T **bus) {
+//     //merge forward and backward
+// }
 
 /*
 * Procedure: set_bank_busy_status
 * Purpose: set bank busy statu
 */
-void set_bank_busy_status(enum ROW_BUFFER_STATUS status, int bank) {
-    assert(!bank_busy_set[bank]);
-    bank_busy_set[bank] = malloc(sizeof(RANGE_T));
-    switch (status) {
-        case HIT:
-            *(bank_busy_set[bank]) = (RANGE_T) {
-                .min_cycle = stat_cycles,
-                .max_cycle = stat_cycles + 100,
-                .next = NULL
-            };
-            break;
-        case MISS:
-            *(bank_busy_set[bank]) = (RANGE_T) {
-                .min_cycle = stat_cycles,
-                .max_cycle = stat_cycles + 100,
-                .next = NULL
-            };
-            break;
-        case CONFLICT:
-            *(bank_busy_set[bank]) = (RANGE_T) {
-                .min_cycle = stat_cycles,
-                .max_cycle = stat_cycles + 100,
-                .next = NULL
-            };
-            break;
-        default:
-            assert(FALSE);
-    }
-}
+// void set_bank_busy_status(enum ROW_BUFFER_STATUS status, int bank) {
+//     assert(!bank_busy_set[bank]);
+//     bank_busy_set[bank] = malloc(sizeof(RANGE_T));
+//     switch (status) {
+//         case HIT:
+//             *(bank_busy_set[bank]) = (RANGE_T) {
+//                 .min_cycle = stat_cycles,
+//                 .max_cycle = stat_cycles + 100,
+//                 .next = NULL
+//             };
+//             break;
+//         case MISS:
+//             *(bank_busy_set[bank]) = (RANGE_T) {
+//                 .min_cycle = stat_cycles,
+//                 .max_cycle = stat_cycles + 100,
+//                 .next = NULL
+//             };
+//             break;
+//         case CONFLICT:
+//             *(bank_busy_set[bank]) = (RANGE_T) {
+//                 .min_cycle = stat_cycles,
+//                 .max_cycle = stat_cycles + 100,
+//                 .next = NULL
+//             };
+//             break;
+//         default:
+//             assert(FALSE);
+//     }
+// }
 
 /*
 * Procedure: set_busy_status
 * Purpose: set the busy status to revelant components
 */
 void set_busy_status(enum ROW_BUFFER_STATUS status, int bank) {
-    set_bank_busy_status(status, bank);
-    set_bus_busy_status(status, &command_bus_busy_set);
-    set_bus_busy_status(status, &data_bus_busy_set);
-    
+    switch (status) {
+        case HIT:
+            set_busy_status_HIT(bank);
+            break;
+        case MISS:
+            set_busy_status_MISS(bank);
+            break;
+        case CONFLICT:
+            set_busy_status_MISS(bank);
+            break;
+        default:
+            assert(FALSE);
+            break;
+    }
+    // set_bank_busy_status(status, bank);
+    // set_bus_busy_status(status, &command_bus_busy_set);
+    // set_bus_busy_status(status, &data_bus_busy_set);
 }
 
+void set_busy_status_HIT(int bank) {
+
+}
+
+void set_busy_status_MISS(int bank) {
+
+}
+
+void set_busy_status_CONFLICT(int bank) {
+
+}
 /*
 * Procedure: serve_request()
 * Purpose: serve the memory request
