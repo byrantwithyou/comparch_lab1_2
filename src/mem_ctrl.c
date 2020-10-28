@@ -3,17 +3,22 @@
 */
 #include "cache.h"
 #include "shell.h"
+#include "mem_ctrl.h"
 #include <string.h>
 #include <assert.h>
 
 
-//TODO:serve_request function:set the status to busy, calculate finished_cycle
+//TODO:set bus status
 //TODO:prune working set status
 //TODO:schedulable function
+//TODO:clean memory space
 //TODO:test
 
 // store which row the 8 bank's row buffer stores, -1 stands for nothing
 int row_buffer[8];
+
+// the busy set of three components, this is a linked list
+RANGE_T *command_bus_busy_set, *data_bus_busy_set, *bank_busy_set[8];
 
 /* ====================Helper Function=============== */
 
@@ -45,10 +50,85 @@ int get_bank(uint32_t address) {
 void mem_cycle() {
     finish_request();
     MSHR_T *request = find_request_to_serve();
-    // serve request
+    serve_request(request);
 }
 
 /* ================= Operation for mshr_queue ================= */
+
+/*
+* Procedure: set_bus_busy_status
+* Purpose: set bus basy status
+*/
+void set_bus_busy_status(enum ROW_BUFFER_STATUS status, RANGE_T **bus) {
+    //merge forward and backward
+}
+
+/*
+* Procedure: set_bank_busy_status
+* Purpose: set bank busy statu
+*/
+void set_bank_busy_status(enum ROW_BUFFER_STATUS status, int bank) {
+    assert(!bank_busy_set[bank]);
+    bank_busy_set[bank] = malloc(sizeof(RANGE_T));
+    switch (status) {
+        case HIT:
+            *(bank_busy_set[bank]) = (RANGE_T) {
+                .min_cycle = stat_cycles,
+                .max_cycle = stat_cycles + 100,
+                .next = NULL
+            };
+            break;
+        case MISS:
+            *(bank_busy_set[bank]) = (RANGE_T) {
+                .min_cycle = stat_cycles,
+                .max_cycle = stat_cycles + 100,
+                .next = NULL
+            };
+            break;
+        case CONFLICT:
+            *(bank_busy_set[bank]) = (RANGE_T) {
+                .min_cycle = stat_cycles,
+                .max_cycle = stat_cycles + 100,
+                .next = NULL
+            };
+            break;
+        default:
+            assert(FALSE);
+    }
+}
+
+/*
+* Procedure: set_busy_status
+* Purpose: set the busy status to revelant components
+*/
+void set_busy_status(enum ROW_BUFFER_STATUS status, int bank) {
+    set_bank_busy_status(status, bank);
+    set_bus_busy_status(status, &command_bus_busy_set);
+    set_bus_busy_status(status, &data_bus_busy_set);
+    
+}
+
+/*
+* Procedure: serve_request()
+* Purpose: serve the memory request
+*/
+void serve_request(MSHR_T *request) {
+    if (!request) return;
+    uint32_t address = request->address;
+    if (row_buffer[get_bank(address)] == -1) {
+        request->finished_cycle = stat_cycles + 250;
+        row_buffer[get_bank(address)] = get_row(address);
+        set_busy_status(MISS, get_bank(address));
+    } else if (row_buffer[get_bank(address)] == get_row(address)) {
+        request->finished_cycle = stat_cycles + 150;
+        set_busy_status(HIT, get_bank(address));
+    } else {
+        request->finished_cycle = stat_cycles + 350;
+        row_buffer[get_bank(address)] = get_row(address);
+        set_busy_status(CONFLICT, get_bank(address));
+    }
+}
+
 
 /*
 * Procedure: finish_request()
@@ -96,6 +176,8 @@ MSHR_T *find_request_to_serve() {
 */
 void init_mshr() {
     l2_cache.mshr.length = 0;
+    command_bus_busy_set = data_bus_busy_set = NULL;
+    memset(bank_busy_set, 0, sizeof bank_busy_set);
     memset(l2_cache.mshr.mshr_arr, 0, sizeof l2_cache.mshr.mshr_arr);
     for (int i = 0; i < 8; ++i) {
         row_buffer[i] = -1;
@@ -154,6 +236,7 @@ int probe_mshr(uint32_t address) {
 * Procedure: schedulable
 * Purpose: Whether a memory request is schedulable
 */
+// to see if 
 int schedulable(MSHR_T *request) {
     return TRUE;
 }

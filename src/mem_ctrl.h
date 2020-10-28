@@ -25,6 +25,12 @@
         struct RANGE_T *next;
     } RANGE_T;
 
+    typedef enum ROW_BUFFER_STATUS {
+        HIT,
+        MISS,
+        CONFLICT
+    } ROW_BUFFER_STATUS;
+
     void mem_cycle();
     /* ============Operation for mshr_queue====================== */
     void init_mshr();
@@ -43,6 +49,12 @@
     MSHR_T *find_request_to_serve();
     // find if there're any requests that have been finished and do clean up
     void finish_request();
+    // access the request in the main memory
+    void serve_request(MSHR_T *request);
+    // set the busy status of the relevant component
+    void set_busy_status(enum ROW_BUFFER_STATUS status, int bank);
+    void set_bank_busy_status(enum ROW_BUFFER_STATUS status, int bank);
+    void set_bus_busy_status(enum ROW_BUFFER_STATUS status, RANGE_T** bus);
     /* ========================================================= */
     /* ===============Helper Function=========================== */
     int get_row(uint32_t address);
