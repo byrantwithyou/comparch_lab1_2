@@ -8,8 +8,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-
-//TODO:query_bus_busy_status, set_bus_busy_status
 //TODO:test and optimize
 
 // store which row the 8 bank's row buffer stores, -1 stands for nothing
@@ -98,16 +96,93 @@ void mem_cycle() {
 * Procedure: query_bus_busy_status
 * Purpose: check whether the bus is busy
 */
-int query_bus_busy_status(enum ROW_BUFFER_STATUS status) {
-    return TRUE;
+int query_bus_busy_status(RANGE_T **bus_busy_status, int *range_list, \
+                        int range_list_length, int range_length) {
+    for (int i = 0; i < range_list_length; ++i) {
+        RANGE_T *current_iter = *bus_busy_status;
+        while (current_iter) {
+            if (intersect(range_list[i], current_iter->min_cycle, range_length))
+            return TRUE;
+            current_iter = current_iter->next;
+        }
+    }
+    return FALSE;
 }
 
 /*
 * Procedure: set_bus_busy_status
 * Purpose: set the bus busy status
 */
-void set_bus_busy_status(enum ROW_BUFFER_STATUS status) {
+void set_bus_busy_status(RANGE_T **bus_busy_status, int *range_list, \
+                        int range_list_length, int range_length) {
+    RANGE_T *current_iter = *bus_busy_status;
+    for (int i = 0; i < range_list_length; ++i) {
+        insert(bus_busy_status, range_list[i], range_length);
+        merge(bus_busy_status);
+    }
+}
 
+/*
+* Procedure: set_bus_busy_status
+* Purpose: set the bus busy status
+*/
+void merge(RANGE_T **bus_busy_status) {
+    RANGE_T *current_iter = *bus_busy_status;
+    while (current_iter) {
+        if (current_iter->next && (current_iter->max_cycle + 1 == \
+        current_iter->next->min_cycle)) {
+            RANGE_T *range_temp = current_iter->next;
+            current_iter->next = current_iter->next->next;
+            free(range_temp);
+        }
+        current_iter = current_iter->next;
+    }
+}
+
+/*
+*
+* Procedure: insert
+* Purpose: insert the range
+*/
+void insert(RANGE_T **bus_busy_status, int range_2_merge, int range_length) {
+    RANGE_T *current_iter = *bus_busy_status;
+    RANGE_T new_range = (RANGE_T) {
+        .min_cycle = stat_cycles,
+        .max_cycle = stat_cycles + range_length,
+        .next = NULL
+    };
+    if (!current_iter) {
+        *bus_busy_status = malloc(sizeof(RANGE_T));
+        **bus_busy_status = new_range;
+        return;
+    }
+    if (current_iter->min_cycle > range_2_merge + range_length) {
+        RANGE_T *range_temp = malloc(sizeof(RANGE_T));
+        *range_temp = new_range;
+        range_temp->next = *bus_busy_status;
+        *bus_busy_status = range_temp;
+        return;
+    }
+    while (current_iter) {
+        if (!current_iter->next) break;
+        if (current_iter->max_cycle < range_2_merge) {
+            if (current_iter->next->min_cycle > range_2_merge + range_length) {
+                RANGE_T *range_temp = malloc(sizeof(RANGE_T));
+                *range_temp = new_range;
+                range_temp->next = current_iter->next;
+                current_iter->next = range_temp;            
+                return;
+            }
+            current_iter = current_iter->next;
+        }
+        else {
+            assert(FALSE);
+        };
+    }
+    RANGE_T *range_temp = malloc(sizeof(RANGE_T));
+    *range_temp = new_range;
+    range_temp->next = NULL;
+    current_iter->next = range_temp;
 }
 
 /*
@@ -122,7 +197,23 @@ void set_busy_status(enum ROW_BUFFER_STATUS status, int bank) {
         .max_cycle = stat_cycles + 100 * status,
         .next = NULL
     };
-    set_bus_busy_status(status);
+    switch (status) {
+        case HIT:
+            set_bus_busy_status(&command_bus_busy_set, \
+            (int []){stat_cycles}, 1, 4);
+            set_bus_busy_status(&data_bus_busy_set, (int []){stat_cycles + 100}, 1, 50);
+        case MISS:
+            set_bus_busy_status(&command_bus_busy_set, \
+            (int []){stat_cycles, stat_cycles + 100}, 2, 4);
+            set_bus_busy_status(&data_bus_busy_set, (int []){stat_cycles + 200}, 1, 50);
+        case CONFLICT:
+            set_bus_busy_status(&command_bus_busy_set, \
+            (int []){stat_cycles, stat_cycles + 100, stat_cycles + 300}, 3, 4);
+            set_bus_busy_status(&data_bus_busy_set, (int []){stat_cycles + 300}, 1, 50);
+        default:
+            assert(FALSE);
+            break;
+    }
 }
 
 /*
@@ -224,7 +315,8 @@ void in_mshr(uint32_t address) {
 void out_mshr(MSHR_T *request) {
     int *length = &(l2_cache.mshr.length);
     assert(((*length) <= 16) && ((*length) > 0) && request);
-    for (MSHR_T *request_iter = request; request_iter < l2_cache.mshr.mshr_arr + (*length - 1); ++request_iter) {
+    for (MSHR_T *request_iter = request; \
+    request_iter < l2_cache.mshr.mshr_arr + (*length - 1); ++request_iter) {
         request->address = (request + 1)->address;
         request->finished_cycle = (request + 1)->finished_cycle;
         assert(request_iter->valid);
@@ -242,7 +334,9 @@ void out_mshr(MSHR_T *request) {
 int probe_mshr(uint32_t address) {
     assert((address % 4 == 0) && (l2_cache.mshr.length <= 16));
     for (int i = 0; i < l2_cache.mshr.length; ++i) {
-        if (l2_cache.mshr.mshr_arr[i].valid && (l2_cache.mshr.mshr_arr[i].address == address)) return TRUE;
+        if (l2_cache.mshr.mshr_arr[i].valid \
+        && (l2_cache.mshr.mshr_arr[i].address == address)) 
+        return TRUE;
     }
     return FALSE;
 }
@@ -257,12 +351,24 @@ int schedulable(MSHR_T *request) {
     int bank = get_bank(address);
     int schedulable = TRUE;
     if (row_buffer[bank] == get_row(address)) {
-        if (query_bus_busy_status(HIT)) return FALSE;
+        if (query_bus_busy_status(&command_bus_busy_set, \
+        (int []){stat_cycles}, 1, 4) \
+        && query_bus_busy_status(&data_bus_busy_set, \
+        (int []){stat_cycles + 100}, 1, 50)) \
+        return FALSE;
     }     
     else if (row_buffer[bank] == -1) {
-        if (query_bus_busy_status(MISS)) return FALSE;
+        if (query_bus_busy_status(&command_bus_busy_set, \
+        (int []){stat_cycles, stat_cycles + 100}, 2, 4) \
+        && query_bus_busy_status(&data_bus_busy_set, \
+        (int []){stat_cycles + 200}, 1, 50)) \
+        return FALSE;
     } else {
-        if (query_bus_busy_status(CONFLICT)) return FALSE;
+        if (query_bus_busy_status(&command_bus_busy_set, \
+        (int []){stat_cycles, stat_cycles + 100, stat_cycles + 200}, 3, 4) \
+        && query_bus_busy_status(&data_bus_busy_set, \
+        (int []){stat_cycles + 300}, 1, 50)) \
+        return FALSE;
     }
     return !bank_busy_set[bank];
 }

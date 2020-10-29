@@ -53,8 +53,12 @@
     void serve_request(MSHR_T *request);
     // set the busy status of the relevant component
     void set_busy_status(enum ROW_BUFFER_STATUS status, int bank);
-    int query_bus_busy_status(enum ROW_BUFFER_STATUS status);
-    void set_bus_busy_status(enum ROW_BUFFER_STATUS status);
+    int query_bus_busy_status(RANGE_T **bus_busy_status, int *range_list, \
+    int range_list_length, int range_length);
+    void set_bus_busy_status(RANGE_T **bus_busy_status, int *range_list, \
+    int range_list_length, int range_length);
+    void insert(RANGE_T **bus_busy_status, int range_2_merge, int range_length);
+    void merge(RANGE_T **bus_busy_status);
     /* ========================================================= */
     /* ===============Helper Function=========================== */
     int get_row(uint32_t address);
