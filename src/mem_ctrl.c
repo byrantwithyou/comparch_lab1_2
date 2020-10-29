@@ -9,8 +9,7 @@
 #include <assert.h>
 
 
-//TODO:set_busy_status_HIT, set_busy_status_MISS, set_busy_status_CONFLICT
-//TODO:schedulable function, optimize 
+//TODO:query_bus_busy_status, set_bus_busy_status
 //TODO:test and optimize
 
 // store which row the 8 bank's row buffer stores, -1 stands for nothing
@@ -96,82 +95,36 @@ void mem_cycle() {
 /* ================= Operation for mshr_queue ================= */
 
 /*
-* Procedure: set_bus_busy_status
-* Purpose: set bus basy status
+* Procedure: query_bus_busy_status
+* Purpose: check whether the bus is busy
 */
-// void set_bus_busy_status(enum ROW_BUFFER_STATUS status, RANGE_T **bus) {
-//     //merge forward and backward
-// }
+int query_bus_busy_status(enum ROW_BUFFER_STATUS status) {
+    return TRUE;
+}
 
 /*
-* Procedure: set_bank_busy_status
-* Purpose: set bank busy statu
+* Procedure: set_bus_busy_status
+* Purpose: set the bus busy status
 */
-// void set_bank_busy_status(enum ROW_BUFFER_STATUS status, int bank) {
-//     assert(!bank_busy_set[bank]);
-//     bank_busy_set[bank] = malloc(sizeof(RANGE_T));
-//     switch (status) {
-//         case HIT:
-//             *(bank_busy_set[bank]) = (RANGE_T) {
-//                 .min_cycle = stat_cycles,
-//                 .max_cycle = stat_cycles + 100,
-//                 .next = NULL
-//             };
-//             break;
-//         case MISS:
-//             *(bank_busy_set[bank]) = (RANGE_T) {
-//                 .min_cycle = stat_cycles,
-//                 .max_cycle = stat_cycles + 100,
-//                 .next = NULL
-//             };
-//             break;
-//         case CONFLICT:
-//             *(bank_busy_set[bank]) = (RANGE_T) {
-//                 .min_cycle = stat_cycles,
-//                 .max_cycle = stat_cycles + 100,
-//                 .next = NULL
-//             };
-//             break;
-//         default:
-//             assert(FALSE);
-//     }
-// }
+void set_bus_busy_status(enum ROW_BUFFER_STATUS status) {
+
+}
 
 /*
 * Procedure: set_busy_status
 * Purpose: set the busy status to revelant components
 */
 void set_busy_status(enum ROW_BUFFER_STATUS status, int bank) {
-    switch (status) {
-        case HIT:
-            set_busy_status_HIT(bank);
-            break;
-        case MISS:
-            set_busy_status_MISS(bank);
-            break;
-        case CONFLICT:
-            set_busy_status_MISS(bank);
-            break;
-        default:
-            assert(FALSE);
-            break;
-    }
-    // set_bank_busy_status(status, bank);
-    // set_bus_busy_status(status, &command_bus_busy_set);
-    // set_bus_busy_status(status, &data_bus_busy_set);
+    assert(!bank_busy_set[bank]);
+    assert(status >= 0 && status <= 2);
+    *(bank_busy_set[bank]) = (RANGE_T) {
+        .min_cycle = stat_cycles,
+        .max_cycle = stat_cycles + 100 * status,
+        .next = NULL
+    };
+    set_bus_busy_status(status);
 }
 
-void set_busy_status_HIT(int bank) {
-
-}
-
-void set_busy_status_MISS(int bank) {
-
-}
-
-void set_busy_status_CONFLICT(int bank) {
-
-}
 /*
 * Procedure: serve_request()
 * Purpose: serve the memory request
@@ -192,7 +145,6 @@ void serve_request(MSHR_T *request) {
         set_busy_status(CONFLICT, get_bank(address));
     }
 }
-
 
 /*
 * Procedure: finish_request()
@@ -303,40 +255,14 @@ int probe_mshr(uint32_t address) {
 int schedulable(MSHR_T *request) {
     uint32_t address = request->address;
     int bank = get_bank(address);
-    if (row_buffer[bank] != get_row(address)) {
-        RANGE_T *iter = command_bus_busy_set;
-        while (iter) {
-            if (intersect(stat_cycles, iter->min_cycle, 4) || intersect(stat_cycles + 100, iter->min_cycle, 4) || intersect(stat_cycles + 200, iter->min_cycle, 4)) return FALSE;
-            iter = iter->next;
-        }
-        iter = data_bus_busy_set;
-        while (iter) {
-            if (intersect(stat_cycles + 300, iter->min_cycle, 50)) return FALSE;
-            iter = iter->next;
-        }
+    int schedulable = TRUE;
+    if (row_buffer[bank] == get_row(address)) {
+        if (query_bus_busy_status(HIT)) return FALSE;
     }     
     else if (row_buffer[bank] == -1) {
-        RANGE_T *iter = command_bus_busy_set;
-        while (iter) {
-            if (intersect(stat_cycles, iter->min_cycle, 4) || intersect(stat_cycles + 100, iter->min_cycle, 4)) return FALSE;
-            iter = iter->next;
-        }
-        iter = data_bus_busy_set;
-        while (iter) {
-            if (intersect(stat_cycles + 200, iter->min_cycle, 50)) return FALSE;
-            iter = iter->next;
-        }
+        if (query_bus_busy_status(MISS)) return FALSE;
     } else {
-        RANGE_T *iter = command_bus_busy_set;
-        while (iter) {
-            if (intersect(stat_cycles, iter->min_cycle, 4)) return FALSE;
-            iter = iter->next;
-        }
-        iter = data_bus_busy_set;
-        while (iter) {
-            if (intersect(stat_cycles + 100, iter->min_cycle, 50)) return FALSE;
-            iter = iter->next;
-        }
+        if (query_bus_busy_status(CONFLICT)) return FALSE;
     }
     return !bank_busy_set[bank];
 }
