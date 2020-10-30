@@ -5,10 +5,9 @@
 #include "shell.h"
 #include "mem_ctrl.h"
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-
-//TODO:test and optimize
 
 // store which row the 8 bank's row buffer stores, -1 stands for nothing
 int row_buffer[8];
@@ -49,7 +48,7 @@ void clean_up() {
     }
     clean_up_helper(&command_bus_busy_set);
     clean_up_helper(&data_bus_busy_set);
-    if (RUN_BIT) {
+    if (!RUN_BIT) {
         destory(&command_bus_busy_set);
         destory(&data_bus_busy_set);
         for (int i = 0; i < 8; ++i) {
@@ -87,7 +86,7 @@ void mem_cycle() {
     finish_request();
     clean_up();
     MSHR_T *request = find_request_to_serve();
-    serve_request(request);
+    if (request) serve_request(request);
 }
 
 /* ================= Operation for mshr_queue ================= */
@@ -123,8 +122,8 @@ void set_bus_busy_status(RANGE_T **bus_busy_status, int *range_list, \
 }
 
 /*
-* Procedure: set_bus_busy_status
-* Purpose: set the bus busy status
+* Procedure: merge
+* Purpose: merge range
 */
 void merge(RANGE_T **bus_busy_status) {
     RANGE_T *current_iter = *bus_busy_status;
@@ -147,8 +146,8 @@ void merge(RANGE_T **bus_busy_status) {
 void insert(RANGE_T **bus_busy_status, int range_2_merge, int range_length) {
     RANGE_T *current_iter = *bus_busy_status;
     RANGE_T new_range = (RANGE_T) {
-        .min_cycle = stat_cycles,
-        .max_cycle = stat_cycles + range_length,
+        .min_cycle = range_2_merge,
+        .max_cycle = range_2_merge + range_length - 1,
         .next = NULL
     };
     if (!current_iter) {
@@ -192,9 +191,10 @@ void insert(RANGE_T **bus_busy_status, int range_2_merge, int range_length) {
 void set_busy_status(enum ROW_BUFFER_STATUS status, int bank) {
     assert(!bank_busy_set[bank]);
     assert(status >= 0 && status <= 2);
+    bank_busy_set[bank] = malloc(sizeof(RANGE_T));
     *(bank_busy_set[bank]) = (RANGE_T) {
         .min_cycle = stat_cycles,
-        .max_cycle = stat_cycles + 100 * status,
+        .max_cycle = stat_cycles + 100 * (status + 1) - 1,
         .next = NULL
     };
     switch (status) {
@@ -202,14 +202,17 @@ void set_busy_status(enum ROW_BUFFER_STATUS status, int bank) {
             set_bus_busy_status(&command_bus_busy_set, \
             (int []){stat_cycles}, 1, 4);
             set_bus_busy_status(&data_bus_busy_set, (int []){stat_cycles + 100}, 1, 50);
+            break;
         case MISS:
             set_bus_busy_status(&command_bus_busy_set, \
             (int []){stat_cycles, stat_cycles + 100}, 2, 4);
             set_bus_busy_status(&data_bus_busy_set, (int []){stat_cycles + 200}, 1, 50);
+            break;
         case CONFLICT:
             set_bus_busy_status(&command_bus_busy_set, \
             (int []){stat_cycles, stat_cycles + 100, stat_cycles + 300}, 3, 4);
             set_bus_busy_status(&data_bus_busy_set, (int []){stat_cycles + 300}, 1, 50);
+            break;
         default:
             assert(FALSE);
             break;
@@ -221,17 +224,17 @@ void set_busy_status(enum ROW_BUFFER_STATUS status, int bank) {
 * Purpose: serve the memory request
 */
 void serve_request(MSHR_T *request) {
-    if (!request) return;
+    assert(request);
     uint32_t address = request->address;
     if (row_buffer[get_bank(address)] == -1) {
-        request->finished_cycle = stat_cycles + 250;
+        request->finished_cycle = stat_cycles + 249;
         row_buffer[get_bank(address)] = get_row(address);
         set_busy_status(MISS, get_bank(address));
     } else if (row_buffer[get_bank(address)] == get_row(address)) {
-        request->finished_cycle = stat_cycles + 150;
+        request->finished_cycle = stat_cycles + 149;
         set_busy_status(HIT, get_bank(address));
     } else {
-        request->finished_cycle = stat_cycles + 350;
+        request->finished_cycle = stat_cycles + 349;
         row_buffer[get_bank(address)] = get_row(address);
         set_busy_status(CONFLICT, get_bank(address));
     }
@@ -243,23 +246,25 @@ void serve_request(MSHR_T *request) {
 */
 void finish_request() {
     for (int i = 0; i < l2_cache.mshr.length; ++i) {
-        if (l2_cache.mshr.mshr_arr[i].finished_cycle == stat_cycles) {
+        if ((l2_cache.mshr.mshr_arr[i].finished_cycle == stat_cycles) \
+        && (stat_cycles != 0)) {
             out_mshr(l2_cache.mshr.mshr_arr + i);
         }
     }
 }
 
 /*
-* Procedure: traverse_msher
+* Procedure: traverse_mshr
 * Purpose: traverse the mshr to find the schedulable and preferred memory request to be served
 */
 MSHR_T *traverse_mshr(int row_hit) {
     for (int i = 0; i < l2_cache.mshr.length; ++i) {
         assert(l2_cache.mshr.mshr_arr[i].valid);
         MSHR_T *request = l2_cache.mshr.mshr_arr + i;
+        if (request->finished_cycle > 0) continue;
         uint32_t address = request->address;
         int same_row = (get_row(address) == row_buffer[get_bank(address)]);
-        if (schedulable(request) && (!row_hit || same_row)) {
+        if (schedulable(request) && (row_hit == same_row)) {
             return l2_cache.mshr.mshr_arr + i;
         }
     }
@@ -303,7 +308,7 @@ void in_mshr(uint32_t address) {
         .valid = TRUE,
         .done = FALSE,
         .address = address,
-        .finished_cycle = 0
+        .finished_cycle = -1
     };
 }
 
@@ -317,13 +322,13 @@ void out_mshr(MSHR_T *request) {
     assert(((*length) <= 16) && ((*length) > 0) && request);
     for (MSHR_T *request_iter = request; \
     request_iter < l2_cache.mshr.mshr_arr + (*length - 1); ++request_iter) {
-        request->address = (request + 1)->address;
-        request->finished_cycle = (request + 1)->finished_cycle;
+        request_iter->address = (request_iter + 1)->address;
+        request_iter->finished_cycle = (request_iter + 1)->finished_cycle;
         assert(request_iter->valid);
     }
     --(*length);
     (l2_cache.mshr.mshr_arr + *length) -> valid = FALSE;
-    (l2_cache.mshr.mshr_arr + *length) -> finished_cycle = 0;
+    (l2_cache.mshr.mshr_arr + *length) -> finished_cycle = -1;
 }
 
 /*
@@ -353,20 +358,20 @@ int schedulable(MSHR_T *request) {
     if (row_buffer[bank] == get_row(address)) {
         if (query_bus_busy_status(&command_bus_busy_set, \
         (int []){stat_cycles}, 1, 4) \
-        && query_bus_busy_status(&data_bus_busy_set, \
+        || query_bus_busy_status(&data_bus_busy_set, \
         (int []){stat_cycles + 100}, 1, 50)) \
         return FALSE;
     }     
     else if (row_buffer[bank] == -1) {
         if (query_bus_busy_status(&command_bus_busy_set, \
         (int []){stat_cycles, stat_cycles + 100}, 2, 4) \
-        && query_bus_busy_status(&data_bus_busy_set, \
+        || query_bus_busy_status(&data_bus_busy_set, \
         (int []){stat_cycles + 200}, 1, 50)) \
         return FALSE;
     } else {
         if (query_bus_busy_status(&command_bus_busy_set, \
         (int []){stat_cycles, stat_cycles + 100, stat_cycles + 200}, 3, 4) \
-        && query_bus_busy_status(&data_bus_busy_set, \
+        || query_bus_busy_status(&data_bus_busy_set, \
         (int []){stat_cycles + 300}, 1, 50)) \
         return FALSE;
     }

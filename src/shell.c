@@ -134,7 +134,7 @@ void help() {
 /* Purpose   : Execute a cycle                                 */
 /*                                                             */
 /***************************************************************/
-void cycle() {                                                
+void cycle() {      
   pipe_cycle();
 
   stat_cycles++;

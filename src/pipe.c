@@ -144,7 +144,7 @@ void pipe_stage_mem()
     /* if there is no instruction in this pipeline stage, we are done */
     if (pipe.mem_stall > 0) --pipe.mem_stall;
     // if it is stuck in the memory, add stall
-    if (pipe.mem_op && probe_mshr(pipe.mem_op->mem_addr & ~3)) ++pipe.mem_stall; 
+    if (pipe.mem_op && probe_mshr((pipe.mem_op->mem_addr & ~31) + 0x1C)) ++pipe.mem_stall; 
     if (!pipe.mem_op)
         return;
     if (pipe.mem_stall > 0) return;
@@ -697,7 +697,7 @@ void pipe_stage_fetch()
     /* if pipeline is stalled (our output slot is not empty), return */
     if (pipe.instruction_stall > 0) --pipe.instruction_stall;
     // if it is stuck in the memory, add instruction stall
-    if (probe_mshr(pipe.PC)) ++pipe.instruction_stall;
+    if (probe_mshr((pipe.PC & ~31) + 0x1C)) ++pipe.instruction_stall;
     if (pipe.decode_op != NULL) return;
     // add tricks to adjust to the basesim
     if (0 == RUN_BIT) {
@@ -750,7 +750,7 @@ void transfer_mem_hier(uint32_t address, CACHE_T *cache, int data_transfer) {
         (*stall) = 10 + 1;
         mem2cache(address, cache);
         mem2cache(address, &(l2_cache.cache));
-        assert (address % 4 == 0);
-        in_mshr(address);
+        for (int i = 0; i < l2_cache.cache.meta_data.block_size / 4; ++i) {
+            in_mshr(traverse_block(address, cache, i));}
     }
 }
